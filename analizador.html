@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Analizador de phishing (.eml y .msg)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f6f8;--sf:#fff;--ink:#141821;--mu:#667085;--ln:#e3e6ec;--ac:#3557ff;--acb:#eaeeff;--hi:#d92d3a;--hib:#fdebec;--md:#a5680a;--mdb:#fff3d9;--ok:#1a8f5a;--okb:#e2f5eb;--in:#5b6472;--inb:#eceff4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1116;--sf:#161a22;--ink:#e8ebf1;--mu:#8b93a3;--ln:#262c37;--ac:#7f96ff;--acb:#1b2240;--hi:#ff6d75;--hib:#2c1619;--md:#f0b14f;--mdb:#2a2312;--ok:#4cc48a;--okb:#12291f;--in:#a0a8b6;--inb:#20252f}}
+:root[data-theme="dark"]{--bg:#0e1116;--sf:#161a22;--ink:#e8ebf1;--mu:#8b93a3;--ln:#262c37;--ac:#7f96ff;--acb:#1b2240;--hi:#ff6d75;--hib:#2c1619;--md:#f0b14f;--mdb:#2a2312;--ok:#4cc48a;--okb:#12291f;--in:#a0a8b6;--inb:#20252f}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{padding:18px 24px 48px}
+header{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--ln)}
+h1{font-size:16px;margin:0;font-weight:600}.sub{color:var(--mu);font-size:13px}
+#drop{display:block;padding:56px 20px;text-align:center;border:1px solid var(--ln);border-radius:8px;background:var(--sf);cursor:pointer}
+#drop.on,#drop:hover{border-color:var(--ac)}
+#drop b{display:block;font-size:16px;font-weight:600;margin-bottom:2px}#drop span{color:var(--mu)}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
+button{font:inherit;font-weight:500;border:1px solid var(--ln);background:var(--sf);color:var(--ink);padding:8px 14px;border-radius:9px;cursor:pointer}
+button:hover{border-color:var(--ac)}button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+textarea{width:100%;height:170px;margin-top:14px;padding:12px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--ink);font:12.5px/1.5 'JetBrains Mono',ui-monospace,monospace;resize:vertical}
+.note{color:var(--mu);font-size:13px;text-align:center;margin-top:12px}
+.vd .n{font-size:48px;font-weight:700;line-height:1;letter-spacing:-.03em}.vd .n small{font-size:16px;font-weight:500;color:var(--mu)}
+.vd h2{margin:8px 0 0;font-size:18px;font-weight:600}.vd p{margin:2px 0 0;color:var(--mu);font-size:14px}
+.t-hi{color:var(--hi)}.t-md{color:var(--md)}.t-ok{color:var(--ok)}
+.lay{display:grid;grid-template-columns:270px minmax(0,1fr);gap:32px;align-items:start}
+aside{position:sticky;top:16px}
+.btns{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+.hi{background:var(--hib);color:var(--hi)}.md{background:var(--mdb);color:var(--md)}.ok{background:var(--okb);color:var(--ok)}.info{background:var(--inb);color:var(--in)}
+.meta{margin:20px 0 0;font-size:13.5px}.meta dt{color:var(--mu);font-size:12.5px;margin-top:10px}.meta dd{margin:0;word-break:break-word}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--ln);margin-bottom:16px}
+.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--mu);padding:9px 12px;white-space:nowrap}
+.tabs button.a{color:var(--ac);border-bottom-color:var(--ac)}
+.f{display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--ln)}
+.f b{font-weight:600}.f p{margin:2px 0 0;color:var(--mu);font-size:14px;word-break:break-word}
+.bd{font-size:13px;font-weight:600;min-width:58px;background:none!important}
+.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.chip{border:1px solid var(--ln);background:none!important;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;color:var(--ink)}.chip span{font-weight:600}.chip.hi span{color:var(--hi)}.chip.ok span{color:var(--ok)}
+.tw{overflow-x:auto;border:1px solid var(--ln);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--ln);vertical-align:top}
+th{color:var(--mu);font-weight:500}tr:last-child td{border-bottom:0}
+.m{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;word-break:break-all}
+pre{margin:0;padding:16px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.6 'JetBrains Mono',ui-monospace,monospace;background:var(--sf);border:1px solid var(--ln);border-radius:10px}
+.tl{display:inline-block;font-size:12px;margin:1px 3px 1px 0;padding:1px 8px;border-radius:99px}
+.hid{display:none}
+.seg{display:flex;gap:8px;margin-bottom:8px}.seg button.a{border-color:var(--ac);color:var(--ac)}
+.hint{margin:0 0 12px;color:var(--mu);font-size:13px}.fr{width:100%;height:72vh;border:1px solid var(--ln);border-radius:8px;background:#fff}
+h3{font-size:14px;font-weight:600;margin:26px 0 10px}
+.msg{padding:16px 0;border-bottom:1px solid var(--ln)}.mh{display:flex;justify-content:space-between;gap:12px}.mh span,.mm{color:var(--mu);font-size:13px;word-break:break-word}
+.ms{font-weight:600;margin:6px 0 8px}.tkn{margin:3px 0;font-size:13px}.msg .mb{margin-top:10px}.hq{display:block;margin:0 0 4px;color:var(--mu);font-size:13px}
+select{width:100%;margin-bottom:16px;padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--sf);color:var(--ink);font:inherit}
+.ic{flex:none;vertical-align:-3px;margin-right:6px}button .ic,.bd .ic,h1 .ic,.vd h2 .ic{margin-right:0}
+button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.bd{display:inline-flex;align-items:center;gap:5px;min-width:84px}
+.vd h2{display:flex;align-items:center;gap:8px}h1{display:flex;align-items:center;gap:8px}h1 .ic{color:var(--ac)}
+#drop .ic{display:block;margin:0 auto 10px;color:var(--ac)}
+.cons{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}.cons .hq{margin:0}
+.cn{border:1px solid var(--ln);border-radius:8px;padding:12px 14px;margin:8px 0 12px}.cn p{margin:0 0 10px;font-size:13.5px}.row2{display:flex;gap:8px}
+button.sm{padding:5px 10px;font-size:13px}
+@media(max-width:860px){.lay{grid-template-columns:1fr;gap:18px}aside{position:static}.btns{flex-direction:row}}
+</style></head><body><div class="wrap">
+<header><h1>Analizador de phishing (.eml y .msg)</h1><span class="sub">Se procesa en tu navegador</span></header>
+
+<section id="in">
+<label id="drop" for="file"><b>Arrastra uno o varios archivos .eml o .msg aquí</b><span>o haz clic para elegirlo</span></label>
+<input id="file" type="file" multiple accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook,.txt" class="hid">
+<div class="row"><button id="bp">Pegar código fuente</button><button id="bs">Probar con un ejemplo</button></div>
+<div id="pw" class="hid"><textarea id="ta" placeholder="Pega aquí el código fuente completo del correo…" spellcheck="false"></textarea><div class="row"><button class="p" id="go">Analizar</button></div></div>
+</section>
+
+<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cp">Copiar indicadores (IOC)</button><button id="nw">Analizar otro correo</button></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const b2u=s=>{const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i)&255;return u};
+const u2b=u=>{let r='';for(let i=0;i<u.length;i+=8192)r+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return r};
+const dec=(b,cs)=>{try{return new TextDecoder((cs||'utf-8').toLowerCase()).decode(b2u(b))}catch(e){return new TextDecoder().decode(b2u(b))}};
+const qp=s=>s.replace(/=\r?\n/g,'').replace(/=([0-9A-Fa-f]{2})/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
+const w47=v=>v.replace(/\?=\s+=\?/g,'?==?').replace(/=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g,(m,cs,e,t)=>{try{return dec(e.toLowerCase()==='b'?atob(t):qp(t.replace(/_/g,' ')),cs)}catch(x){return m}});
+
+/* ---------- soporte .msg (Outlook, CFB/MAPI) -> MIME ---------- */
+function cfb(u){const dv=new DataView(u.buffer,u.byteOffset,u.byteLength);if(dv.getUint32(0,false)!==0xD0CF11E0)throw new Error('no es un archivo .msg válido');
+ const ss=1<<dv.getUint16(30,true),ms=1<<dv.getUint16(32,true),cut=dv.getUint32(56,true),sec=i=>u.subarray((i+1)*ss,(i+2)*ss),OK=x=>x<0xFFFFFFFA;
+ const fs=[];for(let i=0;i<109;i++){const x=dv.getUint32(76+i*4,true);if(OK(x))fs.push(x)}
+ let ds=dv.getUint32(68,true);for(let n=dv.getUint32(72,true);n>0&&OK(ds);n--){const s=new DataView(u.buffer,u.byteOffset+(ds+1)*ss,ss);for(let i=0;i<ss/4-1;i++){const x=s.getUint32(i*4,true);if(OK(x))fs.push(x)}ds=s.getUint32(ss-4,true)}
+ const fat=[];fs.forEach(i=>{const s=new DataView(u.buffer,u.byteOffset+(i+1)*ss,ss);for(let j=0;j<ss/4;j++)fat.push(s.getUint32(j*4,true))});
+ const chain=(st,t)=>{const r=[];let i=st,g=0;while(OK(i)&&g++<1e6){r.push(i);i=t[i]}return r};
+ const rd=(st,z)=>{const ch=chain(st,fat),o=new Uint8Array(ch.length*ss);ch.forEach((s,k)=>o.set(sec(s),k*ss));return o.subarray(0,z)};
+ const dir=rd(dv.getUint32(48,true),Infinity),dd=new DataView(dir.buffer,dir.byteOffset,dir.byteLength),N=dir.length>>7,E=[];
+ for(let i=0;i<N;i++){const o=i*128,nl=Math.max(0,dd.getUint16(o+64,true)-2);E.push({n:new TextDecoder('utf-16le').decode(dir.subarray(o,o+nl)),t:dir[o+66],l:dd.getUint32(o+68,true),r:dd.getUint32(o+72,true),c:dd.getUint32(o+76,true),s:dd.getUint32(o+116,true),z:dd.getUint32(o+120,true)})}
+ const mini=rd(E[0].s,E[0].z),mb=rd(dv.getUint32(60,true),Infinity),mv=new DataView(mb.buffer,mb.byteOffset,mb.byteLength),mf=[];for(let i=0;i+4<=mb.length;i+=4)mf.push(mv.getUint32(i,true));
+ const get=e=>{if(e.z<cut){const ch=chain(e.s,mf),o=new Uint8Array(ch.length*ms);ch.forEach((s,k)=>o.set(mini.subarray(s*ms,(s+1)*ms),k*ms));return o.subarray(0,e.z)}return rd(e.s,e.z)};
+ const kids=e=>{const r=[],w=i=>{if(i>=N)return;const x=E[i];w(x.l);r.push(x);w(x.r)};w(e.c);return r};
+ return{E,kids,get}}
+const u8=b=>{try{return new TextDecoder('utf-8',{fatal:true}).decode(b)}catch(e){return new TextDecoder('windows-1252').decode(b)}};
+function mapi(C,n){const K=C.kids(n),F=id=>K.find(k=>k.t===2&&k.n.toLowerCase().startsWith('__substg1.0_'+id));
+ return{K,
+  s:id=>{const k=F(id);if(!k)return'';const t=k.n.slice(-4).toUpperCase(),b=C.get(k);return t==='0102'?u8(b):new TextDecoder(t==='001F'?'utf-16le':'windows-1252').decode(b).replace(/\0+$/,'')},
+  b:id=>{const k=F(id);return k?C.get(k):null},
+  sub:id=>K.find(k=>k.t===1&&k.n.toLowerCase().startsWith('__substg1.0_'+id)),
+  p:hs=>{const k=K.find(k=>k.n==='__properties_version1.0'),o={};if(k){const b=C.get(k),v=new DataView(b.buffer,b.byteOffset,b.byteLength);for(let i=hs;i+16<=b.length;i+=16)o[v.getUint32(i,true).toString(16).padStart(8,'0')]=[v.getUint32(i+8,true),v.getUint32(i+12,true)]}return o}}}
+function lzfu(b){const v=new DataView(b.buffer,b.byteOffset,b.byteLength),ct=v.getUint32(8,true),raw=v.getUint32(4,true);if(ct===0x414C454D)return u2b(b.subarray(16,16+raw));
+ const PRE='{\\rtf1\\ansi\\mac\\deff0\\deftab720{\\fonttbl;}{\\f0\\fnil \\froman \\fswiss \\fmodern \\fscript \\fdecor MS Sans SerifSymbolArialTimes New RomanCourier{\\colortbl\\red0\\green0\\blue0\r\n\\par \\pard\\plain\\f0\\fs20\\b\\i\\u\\tab\\tx',D=new Uint8Array(4096);
+ for(let i=0;i<PRE.length;i++)D[i]=PRE.charCodeAt(i);let w=PRE.length,i=16;const o=[];
+ while(i<b.length){const c=b[i++];for(let k=0;k<8&&i<b.length;k++){if(c>>k&1){const x=b[i++],y=b[i++],off=(x<<4)|(y>>4),len=(y&15)+2;if(off===w)return u2b(Uint8Array.from(o));for(let j=0;j<len;j++){const ch=D[(off+j)&4095];o.push(ch);D[w]=ch;w=(w+1)&4095}}else{const ch=b[i++];o.push(ch);D[w]=ch;w=(w+1)&4095}}}
+ return u2b(Uint8Array.from(o))}
+function rtfHtml(r){let o='',st=[],hr=0,ig=0;
+ for(let i=0;i<r.length;){const c=r[i];
+  if(c==='{'){st.push([hr,ig]);i++;continue}
+  if(c==='}'){[hr,ig]=st.pop()||[0,0];i++;continue}
+  if(c==='\\'){const m=r.slice(i,i+40).match(/^\\([a-zA-Z]+)(-?\d+)? ?|^\\'([0-9a-fA-F]{2})|^\\([\\{}])|^\\\*/);if(!m){i++;continue}i+=m[0].length;
+   if(m[1]){const w=m[1];if(w==='htmlrtf')hr=m[2]==='0'?0:1;else if(!hr&&!ig&&w==='par')o+='\r\n';else if(!hr&&!ig&&w==='tab')o+='\t';else if(/^(fonttbl|colortbl|stylesheet|info|pict|generator|mhtmltag)$/.test(w))ig=1}
+   else if(m[3]){if(!hr&&!ig)o+=String.fromCharCode(parseInt(m[3],16))}else if(m[4]){if(!hr&&!ig)o+=m[4]}
+   continue}
+  if(c!=='\r'&&c!=='\n'&&!hr&&!ig)o+=c;i++}
+ return o}
+const h47=s=>/[^\x20-\x7e]/.test(s)?'=?utf-8?B?'+btoa(u2b(new TextEncoder().encode(s)))+'?=':s;
+const b64s=s=>btoa(u2b(new TextEncoder().encode(s)));
+function msg2eml(u,d=0){const C=cfb(u);return mm(C,mapi(C,C.E[0]),d,32)}
+function mm(C,M,d,hs){const B='=_m'+d,P=M.p(hs),keep=[];let ok=0;
+ M.s('007d').split(/\r?\n/).forEach(l=>{if(/^\s/.test(l)){if(ok&&keep.length)keep[keep.length-1]+='\r\n'+l;return}const n=(l.match(/^([\w.-]+):/)||[])[1];ok=n&&!/^(content-|mime-version)/i.test(n)?1:0;if(ok)keep.push(l)});
+ if(!keep.length){
+  const fm=(nm,a)=>(nm&&nm!==a?(/[^\x20-\x7e]/.test(nm)?h47(nm):'"'+nm.replace(/"/g,'')+'"')+' ':'')+'<'+a+'>',T=[],Cc=[];
+  M.K.filter(k=>k.t===1&&k.n.startsWith('__recip_version1.0_')).forEach(k=>{const R=mapi(C,k),a=R.s('39fe')||R.s('3003');if(!a)return;((R.p(8)['0c150003']||[1])[0]===2?Cc:T).push(fm(R.s('3001'),a))});
+  const rep=M.s('5d02')||M.s('0065'),snd=M.s('5d01')||M.s('0c1f'),fr=rep||snd,t=P['00390040']||P['0e060040'];
+  if(fr)keep.push('From: '+fm(rep?M.s('0042'):M.s('0c1a'),fr));if(rep&&snd&&rep.toLowerCase()!==snd.toLowerCase())keep.push('Sender: '+fm(M.s('0c1a'),snd));
+  if(T.length)keep.push('To: '+T.join(', '));else if(M.s('0e04'))keep.push('To: '+h47(M.s('0e04')));if(Cc.length)keep.push('Cc: '+Cc.join(', '));
+  keep.push('Subject: '+h47(M.s('0037')));if(t&&(t[0]||t[1]))keep.push('Date: '+new Date((t[1]*4294967296+t[0])/1e4-11644473600000).toUTCString().replace('GMT','+0000'));
+  if(M.s('1035'))keep.push('Message-ID: '+M.s('1035'));
+  keep.push('X-Analizador-Nota: El .msg no incluye las cabeceras de transporte originales. Las cabeceras se han reconstruido desde MAPI, por lo que SPF, DKIM, DMARC y la ruta de servidores no se pueden analizar.')}
+ let html=M.s('1013'),text=M.s('1000');
+ if(!html){const z=M.b('1009');if(z)try{const r=lzfu(z);if(/\\fromhtml/.test(r))html=rtfHtml(r);else if(!text)text=rtfHtml(r.replace(/\\par\b/g,'\r\n'))}catch(e){}}
+ const parts=[];
+ if(text)parts.push('Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+b64s(text));
+ if(html)parts.push('Content-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+b64s(html));
+ M.K.filter(k=>k.t===1&&k.n.startsWith('__attach_version1.0_')).forEach(k=>{const A=mapi(C,k),fn=(A.s('3707')||A.s('3704')||A.s('3001')||'adjunto').replace(/["\r\n]/g,"'"),em=A.sub('3701'),cid=A.s('3712'),mt=A.s('370e')||'application/octet-stream';
+  if(em&&d<4)parts.push('Content-Type: message/rfc822\r\nContent-Disposition: attachment; filename="'+h47(fn)+'"\r\n\r\n'+mm(C,mapi(C,em),d+1,24));
+  else{const b=A.b('3701');if(b)parts.push('Content-Type: '+mt+'; name="'+h47(fn)+'"\r\nContent-Disposition: '+(cid?'inline':'attachment')+'; filename="'+h47(fn)+'"\r\n'+(cid?'Content-ID: <'+cid+'>\r\n':'')+'Content-Transfer-Encoding: base64\r\n\r\n'+btoa(u2b(b)))}});
+ return keep.join('\r\n')+'\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="'+B+'"\r\n\r\n'+parts.map(p=>'--'+B+'\r\n'+p+'\r\n').join('')+'--'+B+'--\r\n'}
+function ent(raw){const m=raw.match(/\r?\n\r?\n/);let h=raw,b='';if(m){h=raw.slice(0,m.index);b=raw.slice(m.index+m[0].length)}
+ const hs=[];h.replace(/\r?\n[ \t]+/g,' ').split(/\r?\n/).forEach(l=>{const m=l.match(/^([\w.-]+)(?:\s*:\s*|\t+)(.*)$/);if(m)hs.push([m[1],w47(m[2].trim())])});return{hs,b}}
+const H=(e,n)=>e.hs.filter(h=>h[0].toLowerCase()===n).map(h=>h[1]),H1=(e,n)=>H(e,n)[0]||'';
+function prm(v){const p=v.split(';'),o={v:p.shift().trim().toLowerCase()};p.forEach(x=>{const i=x.indexOf('=');if(i>0)o[x.slice(0,i).trim().toLowerCase()]=x.slice(i+1).trim().replace(/^"|"$/g,'')});return o}
+function walk(raw,o,d=0){const e=ent(raw),ct=prm(H1(e,'content-type')||'text/plain'),cd=prm(H1(e,'content-disposition'));
+ if(ct.v.startsWith('multipart/')&&ct.boundary&&d<8){e.b.split('--'+ct.boundary).slice(1).forEach(p=>{if(!p.startsWith('--'))walk(p.replace(/^\r?\n/,''),o,d+1)});return}
+ const te=H1(e,'content-transfer-encoding').toLowerCase();let b=e.b;
+ if(te==='base64')try{b=atob(b.replace(/[^A-Za-z0-9+/=]/g,''))}catch(x){}else if(te==='quoted-printable')b=qp(b);
+ let fn=cd.filename||ct.name||'';if(cd['filename*'])try{fn=decodeURIComponent(cd['filename*'].replace(/^[^']*'[^']*'/,''))}catch(x){}
+ fn=w47(fn);
+ if(fn||cd.v==='attachment'||!ct.v.startsWith('text/')){if(ct.v==='message/rfc822'||/\.eml$/i.test(fn))o.sub.push(b);o.att.push({name:fn||'(mensaje adjunto)',type:ct.v,size:b.length,bin:b,cid:H1(e,'content-id').replace(/[<>\s]/g,'')})}
+ else if(ct.v==='text/html')o.html+=dec(b,ct.charset);else o.text+=dec(b,ct.charset)}
+const SLD=new Set(['co','com','org','net','gob','gov','edu','ac']);
+function reg(h){h=h.toLowerCase().replace(/\.$/,'');if(/^[\d.]+$/.test(h)||h.includes(':'))return h;const p=h.split('.'),n=p.length;if(n<=2)return h;return p[n-1].length===2&&SLD.has(p[n-2])?p.slice(-3).join('.'):p.slice(-2).join('.')}
+function adr(s){const m=s.match(/<([^>]+)>/),a=(m?m[1]:s.replace(/\(.*?\)/g,'')).trim(),em=a.match(/[^\s<>"',;]+@[^\s<>"',;]+/);
+ return{email:em?em[0].toLowerCase():'',name:m?s.slice(0,m.index).replace(/^\s*"|"\s*$/g,'').trim():'',domain:em?reg(em[0].split('@')[1]):''}}
+const BR={paypal:['paypal.com'],microsoft:['microsoft.com','microsoftonline.com','office.com','live.com','outlook.com','office365.com','sharepoint.com'],google:['google.com','gmail.com','googlemail.com','googleusercontent.com','gstatic.com'],apple:['apple.com','icloud.com'],amazon:['amazon.com','amazon.es','amazon.co.uk','amazonaws.com'],netflix:['netflix.com'],facebook:['facebook.com','facebookmail.com','fb.com'],instagram:['instagram.com'],linkedin:['linkedin.com'],dropbox:['dropbox.com'],docusign:['docusign.com','docusign.net'],dhl:['dhl.com','dhl.de'],correos:['correos.es'],fedex:['fedex.com'],bbva:['bbva.es','bbva.com'],santander:['santander.com','santander.es','gruposantander.com'],caixabank:['caixabank.es','caixabank.com'],binance:['binance.com'],coinbase:['coinbase.com'],whatsapp:['whatsapp.com'],agenciatributaria:['agenciatributaria.gob.es','agenciatributaria.es']};
+function brand(h){const r=reg(h),n=h.toLowerCase().replace(/0/g,'o').replace(/1/g,'l').replace(/3/g,'e').replace(/5/g,'s');for(const k in BR)if(n.includes(k)&&!BR[k].includes(r))return k;return''}
+const SH=new Set(['bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','is.gd','cutt.ly','rebrand.ly','buff.ly','shorturl.at','t.ly','rb.gy']);
+const TLD=new Set(['zip','mov','xyz','top','click','work','gq','tk','ml','cf','ga','icu','cyou','buzz','rest','sbs','cfd','lol','monster']);
+const TRD=/^(google|googleadservices|doubleclick|youtube|facebook|linkedin|bing|twitter|t|goo)\./;
+function chain(s){const hosts=[],m0=s.match(/^(?:https?:\/\/)?([a-z0-9.-]+\.[a-z]{2,})(?=[\/?#:]|$)/i);if(m0)hosts.push(m0[1].toLowerCase());let last=-1;
+ for(const m of s.matchAll(/(?:https?:)?\/\/([a-z0-9.-]+\.[a-z]{2,})(?=[\/?#:\s]|$)/gi)){const h=m[1].toLowerCase();if(!hosts.includes(h))hosts.push(h);last=m.index}
+ return{hosts,fin:last>=0?'https:'+s.slice(s.indexOf('//',last)).split(/\s/)[0]:''}}
+function unwrap(u){const h=u.hostname.toLowerCase(),q=k=>u.searchParams.get(k);let n='',d=null;
+ if(/(^|\.)safelinks\.protection\.outlook\.com$/.test(h)){n='Microsoft Safe Links';d=q('url')}
+ else if(h==='urldefense.proofpoint.com'){n='Proofpoint';const x=q('u');if(x)try{d=decodeURIComponent(x.replace(/-/g,'%').replace(/_/g,'/'))}catch(e){}}
+ else if(h==='urldefense.com'){n='Proofpoint';const m=u.href.match(/\/v3\/__(.+?)__/);if(m)d=m[1].replace(/\*/g,'')}
+ else if(h==='linkprotect.cudasvc.com'){n='Barracuda';d=q('a')}
+ else if(/protection\.sophos\.com$/.test(h)){n='Sophos';const x=q('u');if(x)d=b64(x)}
+ else if(/mimecast(protect)?\.com$/.test(h))n='Mimecast';
+ return n?{name:n,dest:d&&/^https?:\/\//i.test(d)?d:''}:null}
+function ana(l){let u;try{u=new URL(l.href)}catch(e){return null}const p=u.protocol,f=[];
+ if(p==='mailto:'||p==='tel:')return null;
+ if(p==='javascript:'||p==='data:'){return{...l,host:p,f:[['high','Enlaces que ejecutan código']]}}
+ if(!/^https?:$/.test(p))return null;
+ const w=unwrap(u);if(w){if(!w.dest)return{...l,host:u.hostname,f:[],via:w.name,dest:'(destino no visible)'};const i=ana({href:w.dest,text:l.text});if(i)return{...i,href:l.href,via:w.name,dest:w.dest}}
+ const h=u.hostname,tld=h.split('.').pop();
+ if(/^\d+\.\d+\.\d+\.\d+$/.test(h))f.push(['high','Enlaces que usan una IP en vez de un dominio']);
+ if(/xn--/.test(h)||/[^\x00-\x7f]/.test(l.href.split('/')[2]||''))f.push(['high','Dominios con caracteres engañosos (punycode)']);
+ if(u.username)f.push(['high','URL con "@" que oculta el destino real']);
+ const b=brand(h);if(b)f.push(['high','Dominios que imitan a una marca ('+b+')']);
+ const tm=l.text.match(/(?:https?:\/\/)?((?:[a-z0-9-]+\.)+[a-z]{2,})/i);
+ if(tm&&reg(tm[1])!==reg(h))f.push(['high','El texto del enlace muestra un dominio y el destino es otro']);
+ if(SH.has(reg(h)))f.push(['med','Acortadores de enlaces']);
+ if(TLD.has(tld))f.push(['med','Dominios con extensión de riesgo (.'+tld+')']);
+ if(p==='http:')f.push(['low','Enlaces sin HTTPS']);
+ if(h.split('.').length-reg(h).split('.').length>3)f.push(['low','Dominios con muchos subdominios']);
+ return{...l,host:h,f}}
+const KW=/urgente|inmediat|suspendid|bloquead|verifi[cq]|confirm|contraseña|su cuenta|actividad inusual|24 horas|haga clic|haz clic|caduca|premio|reembolso|factura pendiente|urgent|suspend|verify|password|unusual activity|click here|expire|refund|invoice|gift card|security alert/gi;
+const EH=new Set('exe scr js vbs bat cmd ps1 jar msi lnk hta iso'.split(' ')),EM=new Set('docm xlsm pptm html htm svg zip rar 7z one img shtml xhtml'.split(' '));
+const P={high:18,med:8,low:3,ok:0};
+const TK=/track|pixel|beacon|open\.|\/o\/|[?&](uid|rid|token|recipient)=|mailtrack|mixmax|yesware|hubspot|list-manage|sendgrid|mandrillapp|mailgun|sparkpost|mailchi\.mp|bananatag|getnotify|readnotify|superhuman|streak\.com|exacttarget|cmail\d/i;
+function trk(h,e){const it=[],rc=['disposition-notification-to','return-receipt-to','x-confirm-reading-to'].some(k=>H1(e,k));
+ if(h){const d=new DOMParser().parseFromString(h,'text/html');
+  const add=(u,k,tr)=>{u=(u||'').trim();if(/^(https?:)?\/\//i.test(u)){let host='';try{host=new URL(u,'https://x/').hostname}catch(x){}it.push({url:u,host,k,tr:!!tr||TK.test(u)})}};
+  d.querySelectorAll('img[src]').forEach(i=>{const w=i.getAttribute('width'),t=i.getAttribute('height'),st=i.getAttribute('style')||'';add(i.getAttribute('src'),'Imagen',(w!==null&&+w<=1)||(t!==null&&+t<=1)||/(width|height):\s*[01]px|display:\s*none/i.test(st))});
+  d.querySelectorAll('[background]').forEach(x=>add(x.getAttribute('background'),'Fondo'));
+  d.querySelectorAll('link[href]').forEach(x=>add(x.getAttribute('href'),'Hoja de estilo'));
+  (h.match(/url\(\s*['"]?https?:[^'")\s]+/gi)||[]).forEach(m=>add(m.replace(/^url\(\s*['"]?/i,''),'CSS'))}
+ return{it,rc}}
+function flat(e,o,d=0){const m=[{e,o,from:H1(e,'from'),to:H1(e,'to'),cc:H1(e,'cc'),date:H1(e,'date'),subj:H1(e,'subject'),mid:H1(e,'message-id'),t:Date.parse(H1(e,'date'))||0,trk:trk(o.html,e)}];
+ if(d<4)o.sub.forEach(raw=>{try{const e2=ent(raw),o2={text:'',html:'',att:[],sub:[]};walk(raw,o2);m.push(...flat(e2,o2,d+1))}catch(x){}});return m}
+function cidfix(h,att){const m={};att.forEach(a=>{if(a.cid&&/^image\/(png|jpe?g|gif|webp|bmp)/i.test(a.type))m[a.cid]='data:'+a.type+';base64,'+btoa(a.bin)});return h.replace(/cid:([^"'\s)>]+)/gi,(x,id)=>m[id]||x)}
+function frame(h,hq,rm){const f=document.createElement('iframe');f.setAttribute('sandbox','allow-same-origin');f.className='fr';f.style.height='120px';
+ f.srcdoc='<meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '+(rm?'img-src * data:; style-src * \'unsafe-inline\'; font-src * data:; media-src *':'img-src data:; style-src \'unsafe-inline\'; font-src data:')+'"><base target="_blank"><style>body{overflow-wrap:anywhere}'+(hq?'blockquote,.gmail_quote,.gmail_extra,.yahoo_quoted,.moz-cite-prefix{display:none!important}':'')+'</style>'+h;
+ f.onload=()=>{try{f.style.height=f.contentDocument.documentElement.scrollHeight+4+'px'}catch(e){}};
+ if(rm)setTimeout(()=>{try{const im=[...f.contentDocument.images].filter(i=>/^https?:/.test(i.src));if(im.length&&im.every(i=>!i.naturalWidth)){const n=document.createElement('p');n.className='tkn t-md';n.textContent='No se ha podido cargar el contenido externo: el servidor ya no lo sirve o este entorno bloquea las conexiones externas. En ese caso, abre la página guardada en local.';f.before(n)}}catch(e){}},3000);
+ return f}
+function qtxt(t,hq){if(!hq)return t;const o=[];for(const l of t.split(/\r?\n/)){if(/^\s*(-{2,}\s*(original message|mensaje original)|on .+wrote:|el .+escribi)/i.test(l))break;if(!/^\s*>/.test(l))o.push(l)}return o.join('\n')}
+function conv(){const seen=new Set(),M=ALL.flatMap(a=>a.msgs).filter(m=>{if(!m.mid)return true;if(seen.has(m.mid))return false;seen.add(m.mid);return true}).sort((a,b)=>a.t-b.t);return{M,tk:M.filter(m=>m.trk.it.length||m.trk.rc)}}
+function msgHtml(m,i){const it=m.trk.it,tr=it.filter(x=>x.tr),rm=it.filter(x=>!x.tr),hs=a=>esc([...new Set(a.map(x=>x.host))].slice(0,3).join(', '));
+ return`<article class="msg"><div class="mh"><b>${esc(m.from||'(sin remitente)')}</b><span>${esc(m.date||'')}</span></div><div class="mm">Para: ${esc(m.to||'—')}${m.cc?' · Cc: '+esc(m.cc):''}</div><div class="ms">${esc(m.subj||'(sin asunto)')}</div>`
+ +(tr.length?`<p class="tkn t-hi">${ic('eye',14)}<b>Rastreador:</b> ${tr.length} elemento${tr.length>1?'s':''} (${hs(tr)}) que avisaría${tr.length>1?'n':''} al remitente al cargarse.</p>`:'')
+ +(rm.length?`<p class="tkn t-md">${ic('globe',14)}<b>Contenido remoto:</b> ${rm.length} recurso${rm.length>1?'s':''} (${hs(rm)}). Al cargarse revelan tu IP y la hora de apertura.</p>`:'')
+ +(m.trk.rc?'<p class="tkn t-md">'+ic('eye',14)+'<b>Acuse de lectura:</b> el mensaje pide confirmar que se ha leído.</p>':'')
+ +(m.o.att.length?`<p class="tkn">${ic('paperclip',14)}Adjuntos: ${esc(m.o.att.map(a=>a.name).join(', '))}</p>`:'')+(it.length?(rmOn(i)?`<p class="tkn t-md">${ic('globe',14)}<b>Contenido externo cargado.</b> El remitente puede saber que has abierto el mensaje.</p>`:`<p class="tkn"><button class="sm" data-ld="${i}">${ic('globe',14)} Cargar contenido externo de este mensaje</button></p><div id="cf${i}"></div>`):'')+`<div class="mb" id="mb${i}"></div></article>`}
+function convInit(){const pane=$('#pane'),M=conv().M;
+ const draw=()=>{pane.innerHTML=convHtml();bind()};
+ const ask=(box,txt,yes)=>{box.innerHTML=`<div class="cn"><p>${ic('shield-check',15)} ${txt}</p><div class="row2"><button class="p" data-y>Entiendo, cargar</button><button data-n>Cancelar</button></div></div>`;box.querySelector('[data-y]').onclick=yes;box.querySelector('[data-n]').onclick=()=>box.innerHTML=''};
+ const bind=()=>{const mt=()=>{HQ=$('#hq').checked;mount(M,HQ)};mt();$('#hq').onchange=mt;
+  $('#ld').onclick=()=>{if(CONS.all||CONS.set.size){CONS.all=false;CONS.set.clear();draw()}else ask($('#cf'),W+' Se aplicará a todos los mensajes.',()=>{CONS.all=true;draw()})};
+  pane.querySelectorAll('[data-ld]').forEach(b=>b.onclick=()=>{const i=+b.dataset.ld;ask($('#cf'+i),W,()=>{CONS.set.add(i);draw()})})};
+ bind()}
+function convHtml(){const{M,tk}=conv();
+ const x=tk.length?`<b class="t-md">${tk.length} de ${M.length} mensajes incluyen rastreadores, contenido remoto o acuse de lectura.</b> Por defecto no se carga ninguno, así que los remitentes no saben que los has abierto. Puedes cargarlos con tu consentimiento.`:'<b class="t-ok">Sin rastreadores.</b> Abrir estos mensajes no avisa a los remitentes.';
+ return`<p class="hint">${M.length} mensaje${M.length>1?'s':''} en orden cronológico, incluidos los mensajes adjuntos o reenviados. ${x}</p><div class="cons"><button id="ld">${CONS.all||CONS.set.size?ic('eye-off',15)+' Bloquear de nuevo el contenido externo':ic('globe',15)+' Cargar contenido externo…'}</button><label class="hq"><input type="checkbox" id="hq"${HQ?' checked':''}> Ocultar texto citado</label></div><div id="cf"></div>`+M.map(msgHtml).join('')}
+function mount(M,hq){M.forEach((m,i)=>{const c=$('#mb'+i);if(!c)return;c.innerHTML='';
+ if(m.o.html)c.appendChild(frame(cidfix(m.o.html,m.o.att),hq,rmOn(i)));else{const p=document.createElement('pre');p.textContent=qtxt((m.o.text||'(cuerpo vacío)').trim(),hq);c.appendChild(p)}})}
+const prt=s=>s.length>=4&&!/\ufffd/.test(s)&&(s.match(/[\x20-\x7e\u00a0-\uffff\n\t]/g)||[]).length/s.length>.95&&/[a-z@:.]{3}/i.test(s);
+function b64(c){c=c.replace(/-/g,'+').replace(/_/g,'/').replace(/=+$/,'');c+='='.repeat((4-c.length%4)%4);try{const b=atob(c);try{return new TextDecoder('utf-8',{fatal:true}).decode(b2u(b))}catch(e){return b}}catch(e){return null}}
+function unw(v){const ch=[];let cur=v;
+ for(let i=0;i<4;i++){let n=null,k='';
+  if(/%[0-9a-f]{2}/i.test(cur)){try{const d=decodeURIComponent(cur);if(d!==cur){n=d;k='URL'}}catch(e){}}
+  if(n===null&&/^[A-Za-z0-9+/_-]{8,}={0,2}$/.test(cur)){const d=b64(cur);if(d&&prt(d)){n=d;k='Base64'}}
+  if(n===null&&/^([0-9a-f]{2}){6,}$/i.test(cur)){const d=cur.match(/../g).map(h=>String.fromCharCode(parseInt(h,16))).join('');if(prt(d)){n=d;k='Hex'}}
+  if(n===null)break;ch.push(k);cur=n}
+ return ch.length?{ch,out:cur}:null}
+function decs(LA){const R=[];
+ LA.forEach(l=>{let u;try{u=new URL(l.href)}catch(e){return}const it=[];
+  u.search.slice(1).split('&').filter(Boolean).forEach(p=>{const i=p.indexOf('=');it.push(['Consulta',i<0?'':p.slice(0,i),i<0?p:p.slice(i+1)])});
+  u.pathname.split('/').filter(x=>x.length>=8).forEach(x=>it.push(['Ruta','',x]));
+  if(u.hash.length>1){const h=u.hash.slice(1);if(/^[\w%.-]+=/.test(h))h.split('&').forEach(p=>{const i=p.indexOf('=');it.push(['Fragmento',p.slice(0,i),p.slice(i+1)])});else it.push(['Fragmento','',h])}
+  it.forEach(([w,k,v])=>{const d=unw(v);if(d)R.push({via:l.via,host:u.hostname,where:w,key:k,raw:v,out:d.out,ch:d.ch,urls:(/^[a-z0-9.-]+\.[a-z]{2,}[\/?]/i.test(d.out)&&!/^https?:/i.test(d.out)?['https://'+d.out.split(/\s/)[0]]:[]).concat(d.out.match(/https?:\/\/[^\s<>"'\\]+/g)||[]).map(x=>x.replace(/[.,;)]+$/,'')),mails:d.out.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g)||[]})})});
+ return R}
+async function sha(b){try{const d=await crypto.subtle.digest('SHA-256',b2u(b));return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return'no disponible'}}
+async function analyze(raw){
+ const e=ent(raw),o={text:'',html:'',att:[],sub:[]};walk(raw,o);const F=[],add=(s,t,d,p)=>F.push({s,t,d,p:p??P[s]});
+ const fr=adr(H1(e,'from')),rt=adr(H1(e,'reply-to')),rp=adr(H1(e,'return-path')),snd=adr(H1(e,'sender')),mid=(H1(e,'message-id').match(/@([^>\s]+)/)||[])[1]||'';
+ if(!fr.email)add('high','Falta el remitente (From)','No se pudo leer una dirección válida en la cabecera From.');
+ if(rt.email&&rt.domain!==fr.domain)add('high','Reply-To distinto del remitente','Las respuestas irían a '+rt.email+' y no a '+fr.email+'.',14);
+ const tos=(H1(e,'to')+' '+H1(e,'cc')).match(/[^\s<>"',;]+@[^\s<>"',;]+/g)||[];
+ if(fr.email&&tos.some(x=>x.toLowerCase()===fr.email))add('high','Remitente y destinatario son la misma dirección','El mensaje dice venir de '+fr.email+' y va dirigido a esa misma cuenta. Es una táctica de suplantación habitual para generar confianza; solo es normal si te lo enviaste tú.',14);
+ if(H1(e,'sender')){
+  if(!snd.email)add('med','Sender ilegible','La cabecera Sender no contiene una dirección válida: "'+H1(e,'sender')+'".',8);
+  else if(snd.email!==fr.email){
+   if(snd.domain!==fr.domain)add('high','Sender y From de dominios distintos','Sender: '+snd.email+' · From: '+fr.email+'. Los atacantes usan Sender para ocultar el origen real; solo es normal en listas de correo o envíos delegados.',14);
+   else add('low','Sender y From con buzones distintos','Sender: '+snd.email+' · From: '+fr.email+' (mismo dominio).');
+   const bs=snd.domain&&brand(snd.domain);if(bs)add('high','Dominio del Sender imita a una marca',snd.domain+' se parece a '+bs+' sin ser oficial.',16)}
+  else add('ok','Sender coincide con From','Ambas cabeceras usan '+fr.email+'.')}
+ if(rp.email&&rp.domain!==fr.domain)add('med','Return-Path de otro dominio','El sobre usa '+rp.domain+' y el remitente visible usa '+fr.domain+'. Es normal en servicios de envío masivo.',6);
+ const nm=fr.name.match(/[\w.+-]+@([\w.-]+)/);
+ if(nm&&reg(nm[1])!==fr.domain)add('high','Nombre visible con otra dirección','El nombre "'+fr.name+'" muestra una dirección distinta a la real ('+fr.email+').',18);
+ for(const k in BR)if(fr.name.toLowerCase().includes(k)&&!BR[k].includes(fr.domain)){add('high','Suplantación de marca en el nombre','El nombre menciona "'+k+'" pero el dominio real es '+fr.domain+'.',18);break}
+ const bf=fr.domain&&brand(fr.domain);if(bf)add('high','Dominio del remitente imita a una marca',fr.domain+' se parece a '+bf+' sin ser un dominio oficial.',20);
+ if(/xn--/.test(fr.domain))add('high','Dominio del remitente en punycode','Puede ser un homógrafo que imita otro dominio.',15);
+ if(!H1(e,'message-id'))add('med','Sin Message-ID','Los servidores legítimos siempre lo añaden.',5);else if(mid&&fr.domain&&reg(mid)!==fr.domain)add('low','Message-ID de otro dominio','Generado por '+reg(mid)+'.');
+ const RK={fail:5,hardfail:5,softfail:4,permerror:4,temperror:3,none:2,neutral:2,pass:0},av={spf:[],dkim:[],dmarc:[]},au={},aS={};
+ ['authentication-results','authentication-results-original','x-original-authentication-results'].forEach(n=>H(e,n).forEach(v=>[...v.matchAll(/\b(spf|dkim|dmarc)=(\w+)/gi)].forEach(m=>av[m[1].toLowerCase()].push([m[2].toLowerCase(),n]))));
+ H(e,'received-spf').forEach(v=>{const r=v.match(/^\s*(\w+)/);if(r)av.spf.push([r[1].toLowerCase(),'received-spf'])});
+ for(const k in av){const a=av[k].slice().sort((x,y)=>(RK[y[0]]??1)-(RK[x[0]]??1))[0];if(a){au[k]=a[0];aS[k]=a[1]}}
+ const cf=Object.keys(av).filter(k=>av[k].some(x=>x[0]==='pass')&&av[k].some(x=>(RK[x[0]]??0)>=3));
+ const ks=['spf','dkim','dmarc'];
+ if(cf.length)add('high','Resultados de autenticación contradictorios','En '+cf.map(k=>k.toUpperCase()).join(' y ')+' un servidor indica pass y otro fail. Suele ocurrir cuando un gateway reenvía el mensaje y lo vuelve a autenticar desde su propia IP: prevalece el resultado original, que es el fallido.',15);
+ if(!ks.some(k=>au[k])){if(!H1(e,'x-analizador-nota'))add('med','Sin resultados de autenticación','No hay SPF, DKIM ni DMARC. Puede ocurrir en correos exportados o reenviados.',6)}
+ else{ks.forEach(k=>{const v=au[k];if(!v)return;const U=k.toUpperCase();
+  if(v==='pass')add('ok',U+' correcto','El servidor receptor validó '+U+'.');
+  else if(/fail|error/.test(v))add('high',U+' no supera la validación','Resultado: '+v+' (según '+aS[k]+').',v==='softfail'?6:k==='dmarc'?15:12);
+  else add('low',U+' sin política ('+v+')','El dominio no publica o no aplica esta protección.')})}
+ const txt=o.text||(o.html?new DOMParser().parseFromString(o.html,'text/html').body.textContent:'');
+ const hits=[...new Set(((H1(e,'subject')+' '+txt).match(KW)||[]).map(x=>x.toLowerCase()))];
+ if(hits.length>=3)add('med','Lenguaje de urgencia o presión','Términos detectados: '+hits.slice(0,8).join(', ')+'.',hits.length>=5?12:8);
+ else if(hits.length)add('low','Algunas palabras típicas de phishing',hits.join(', ')+'.');
+ if(/origen sospechoso|\bspam\b|phish|suspicious|sospechos[oa]/i.test(H1(e,'subject')))add('med','El filtro de correo ya lo ha marcado','El asunto lleva una etiqueta añadida por un gateway o antispam: «'+H1(e,'subject').slice(0,80)+'».',8);
+ if(H1(e,'x-analizador-nota'))add('low','Cabeceras reconstruidas desde el .msg',H1(e,'x-analizador-nota'),6);
+ if(!o.html&&!o.text&&!o.att.length&&!o.sub.length)add('low','El archivo no incluye cuerpo','Solo hay cabeceras, así que no se pueden analizar enlaces ni adjuntos.');
+ const L=[],seen=new Set();let forms=0,pw=0,pix=0;
+ if(o.html){const d=new DOMParser().parseFromString(o.html,'text/html');
+  d.querySelectorAll('a[href]').forEach(a=>L.push({href:a.getAttribute('href').trim(),text:a.textContent.replace(/\s+/g,' ').trim()}));
+  forms=d.querySelectorAll('form').length;pw=d.querySelectorAll('input[type=password]').length;
+  pix=[...d.querySelectorAll('img')].filter(i=>(i.getAttribute('width')==='1'&&i.getAttribute('height')==='1')||/width:\s*1px/.test(i.getAttribute('style')||'')).length}
+ (txt.match(/https?:\/\/[^\s<>"')\]]+/g)||[]).forEach(u=>L.push({href:u,text:''}));
+ const LA=L.filter(l=>{const k=l.href+'|'+l.text;if(seen.has(k))return false;seen.add(k);return true}).map(ana).filter(Boolean);
+ const DEC=decs(LA);DEC.filter(d=>!d.via).forEach(d=>d.urls.forEach(u=>{const k=u+'|(dec)';if(seen.has(k))return;seen.add(k);const a=ana({href:u,text:''});if(a){a.dec=1;LA.push(a)}}));
+ const RD=[],chk=(h,t)=>{const c=chain(t),a=c.hosts;if(a.length>=2&&TRD.test(reg(a[0]))&&!TRD.test(reg(a[a.length-1]))&&reg(a[a.length-1])!==reg(a[0]))RD.push(c)};
+ DEC.forEach(d=>chk(d.host,d.out));LA.filter(l=>!l.via&&!l.dec).forEach(l=>{let x=l.href;try{x=decodeURIComponent(x)}catch(e){}chk(l.host,x)});
+ RD.forEach(c=>{const k=c.fin+'|(red)';if(!seen.has(k)){seen.add(k);const a=ana({href:c.fin,text:''});if(a){a.dec=1;LA.push(a)}}});
+ if(RD.length){const lg=RD.some(c=>c.hosts.length>=3);add(lg?'high':'med','Redirección en cadena por dominios de confianza','Recorrido: '+RD[0].hosts.join(' → ')+'. Los atacantes enlazan a servicios fiables (Google, Meet…) que redirigen al sitio real para saltarse los filtros.',lg?16:8)}
+ const G={};LA.forEach(l=>l.f.forEach(([s,t])=>{(G[t]=G[t]||{s,h:new Set()}).h.add(l.host)}));
+ Object.entries(G).forEach(([t,g])=>add(g.s,t,'Detectado en: '+[...g.h].slice(0,4).join(', ')+(g.h.size>4?'…':'')+'.'));
+ const vi=LA.filter(l=>l.via);
+ if(vi.length)add('ok','Enlaces reescritos por protección de correo ('+[...new Set(vi.map(l=>l.via))].join(', ')+')',vi.length+' enlace(s) pasan por el filtro del proveedor. Se analiza el destino real: '+[...new Set(vi.map(l=>l.host))].slice(0,5).join(', ')+'.');
+ const um=DEC.filter(d=>!d.via&&d.urls.some(u=>{try{return reg(new URL(u).hostname)!==reg(d.host)}catch(e){return 0}})),em=DEC.filter(d=>!d.via&&d.mails.length);
+ if(um.length)add('med','URL de otro dominio oculta en un parámetro codificado','Destino decodificado: '+[...new Set(um.flatMap(d=>d.urls.map(u=>{try{return new URL(u).hostname}catch(e){return u}})))].slice(0,4).join(', ')+'. Revisa el destino final.',10);
+ if(em.length)add('med','Dirección de correo codificada en un enlace','Aparece '+em[0].mails[0]+' dentro de un parámetro. Es habitual en kits de phishing que rellenan el formulario con los datos de la víctima.',8);
+ if(pw)add('high','Campo de contraseña dentro del correo','El correo intenta recoger credenciales directamente.',20);else if(forms)add('med','Formulario incrustado','Los formularios en correos son poco habituales y suelen indicar phishing.',10);
+ const TR=trk(o.html,e),trs=TR.it.filter(x=>x.tr);
+ if(trs.length)add('low','Rastreador de apertura',trs.length+' elemento(s) avisan al remitente cuando se carga el correo ('+[...new Set(trs.map(x=>x.host))].slice(0,3).join(', ')+'). Aquí no se cargan.');
+ else if(TR.it.length)add('low','Contenido remoto','Hay '+TR.it.length+' recurso(s) externos que revelarían tu IP y la hora de apertura si se cargaran.');
+ if(TR.rc)add('low','Acuse de lectura solicitado','Una cabecera pide al cliente de correo que confirme la lectura.');
+ for(const a of o.att){a.sha=await sha(a.bin);const n=a.name.toLowerCase(),x=n.split('.').pop();
+  if(/\.\w{2,5}\.(exe|scr|js|vbs|bat|cmd|lnk|jar|hta|ps1)$/.test(n))add('high','Doble extensión en adjunto',a.name+' oculta un ejecutable.',25);
+  else if(EH.has(x))add('high','Adjunto ejecutable',a.name+' puede ejecutar código al abrirse.',25);
+  else if(['docm','xlsm','pptm'].includes(x))add('med','Documento con macros',a.name+' puede contener macros maliciosas.',15);
+  else if(EM.has(x))add('med','Adjunto de riesgo ('+x+')',a.name+' es un formato habitual para ocultar malware o páginas falsas.',10)}
+ const priv=ip=>/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(ip)||/^(::1|fe80|fc|fd)/i.test(ip);
+ const hops=H(e,'received').map(v=>{const w=v.replace(/\bid\s+[\w.-]+/gi,''),f=w.match(/from\s+(\S+)\s*(?:\(([^)]*)\))?/i)||[],inn=f[2]||'',helo=f[1]||'',
+  ip=(inn.match(/((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7})/i)||[])[1]||(helo.match(/^\[?((?:\d{1,3}\.){3}\d{1,3})\]?$/)||[])[1]||'',
+  rd=(inn.match(/^([^\s\[]+)/)||[])[1]||'',n=[];
+  if(/^localhost$/i.test(helo)||/^(127\.|::1)/.test(ip))n.push('Salto interno (loopback)');else if(ip&&priv(ip))n.push('IP privada');
+  if(/^\[?\d+\.\d+\.\d+\.\d+\]?$/.test(helo))n.push('HELO con IP literal');
+  if(/^unknown$/i.test(rd))n.push('Sin DNS inverso');
+  return{fr:helo,rd,ip,by:(w.match(/\bby\s+(\S+)/i)||[])[1]||'',dt:(v.split(';').pop()||'').trim(),n}}).reverse();
+ const org=hops.find(h=>h.ip&&!priv(h.ip));
+ if(org&&org.n.some(x=>/DNS|HELO/.test(x)))add('med','Servidor de origen poco fiable','El primer servidor público ('+org.ip+') presenta: '+org.n.filter(x=>/DNS|HELO/.test(x)).join(' y ').toLowerCase()+'. Los servidores de correo legítimos suelen tener nombre propio.',8);
+ const score=Math.min(100,F.reduce((a,f)=>a+f.p,0));
+ return{e,o,F,fr,rt,rp,snd,mid,au,LA,dec:DEC,hops,score,txt,hits,msgs:flat(e,o)}}
+
+const VD=s=>s<15?['Riesgo bajo','ok','No se aprecian señales claras de phishing.']:s<40?['Sospechoso','md','Hay señales que conviene revisar antes de actuar.']:s<70?['Riesgo alto','hi','Varias señales típicas de phishing.']:['Phishing probable','hi','No abras enlaces ni adjuntos.'];
+const SV={high:['Alto','hi'],med:['Medio','md'],low:['Bajo','info'],ok:['Correcto','ok']},ORD={high:0,med:1,low:2,ok:3};
+const tb=(h,r)=>`<div class="tw"><table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.join('')||`<tr><td colspan="${h.length}">Sin datos.</td></tr>`}</table></div>`;
+const defang=s=>s.replace(/^http/i,'hxxp').replace(/\./g,'[.]');
+const IC={
+'mail':'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+'upload':'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+'clipboard':'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+'flask':'<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
+'copy':'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+'check':'<path d="M20 6 9 17l-5-5"/>',
+'arrow-left':'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+'shield-alert':'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+'shield-check':'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+'list-checks':'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+'message-square':'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+'monitor':'<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>',
+'user-check':'<path d="m16 11 2 2 4-4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+'route':'<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+'link':'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+'paperclip':'<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+'list':'<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
+'triangle-alert':'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+'circle-alert':'<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+'info':'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+'circle-check':'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+'eye':'<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+'eye-off':'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+'globe':'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>'};
+const ic=(n,z=16)=>`<svg class="ic" viewBox="0 0 24 24" width="${z}" height="${z}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`;
+const ib=(sel,n,t)=>{$(sel).innerHTML=ic(n,15)+t};
+const TI={'Hallazgos':'list-checks','Conversación':'message-square','Vista':'monitor','Identidad':'user-check','Ruta':'route','Enlaces':'link','Adjuntos':'paperclip','Cabeceras':'list'},SI={high:'triangle-alert',med:'circle-alert',low:'info',ok:'circle-check'};
+let HQ=false;const CONS={all:false,set:new Set()},rmOn=i=>CONS.all||CONS.set.has(i);
+const W='Al cargar contenido externo, los remitentes y los servidores de seguimiento podrán ver tu IP, tu navegador y la hora de apertura, y sabrán que has leído el mensaje. Se cargan imágenes, estilos, fuentes y multimedia; los scripts, formularios y marcos externos siguen bloqueados.';
+let R,ALL=[];
+function show(r){R=r;const[v,c,d]=VD(r.score),n=k=>r.F.filter(f=>f.s===k).length;
+ $('#in').classList.add('hid');$('#out').classList.remove('hid');
+ $('#vd').className='vd t-'+c;$('#vd').innerHTML=`<div class="n">${r.score}<small>/100</small></div><h2>${ic(c==='ok'?'shield-check':'shield-alert',20)}${v}</h2><p>${d} ${n('high')} alto, ${n('med')} medio, ${n('low')} bajo.</p>`;
+
+ const E=r.e;$('#selw').innerHTML=ALL.length>1?'<select id="sel">'+ALL.map((a,i)=>`<option value="${i}"${a===r?' selected':''}>${esc(a.name)}</option>`).join('')+'</select>':'';if(ALL.length>1)$('#sel').onchange=ev=>show(ALL[+ev.target.value]);const sd=r.snd.email&&r.snd.email!==r.fr.email;$('#meta').innerHTML=[['Asunto',H1(E,'subject')],['Sender',H1(E,'sender'),sd],['De',H1(E,'from')],['Para',H1(E,'to')],['Fecha',H1(E,'date')]].map(([k,x,b])=>`<dt>${k}</dt><dd${b?' class="t-hi"':''}>${esc(x||'—')}</dd>`).join('');
+ const T={
+ 'Hallazgos':()=>[...r.F].sort((a,b)=>ORD[a.s]-ORD[b.s]).map(f=>`<div class="f"><span class="bd ${SV[f.s][1]}">${ic(SI[f.s],15)}${SV[f.s][0]}</span><div><b>${esc(f.t)}</b><p>${esc(f.d)}</p></div></div>`).join('')||'<p>Sin hallazgos.</p>',
+ 'Conversación':()=>convHtml(),
+ 'Vista':()=>`<div class="seg">${r.o.html?'<button data-v="html">HTML</button>':''}<button data-v="text">Texto plano</button></div><p class="hint">Vista aislada: sin scripts, sin imágenes remotas y sin enlaces activos.</p><div id="vw"></div>`,
+ 'Identidad':()=>`<div class="chips">${['spf','dkim','dmarc'].map(k=>{const x=r.au[k]||'sin dato';return`<div class="chip ${x==='pass'?'ok':/fail|error/.test(x)?'hi':'info'}">${k.toUpperCase()}<span>${esc(x)}</span></div>`}).join('')}</div>`+tb(['Campo','Valor','Dominio'],[['Sender',H1(E,'sender'),r.snd.domain],['From',H1(E,'from'),r.fr.domain],['Reply-To',H1(E,'reply-to'),r.rt.domain],['Return-Path',H1(E,'return-path'),r.rp.domain],['Message-ID',H1(E,'message-id'),r.mid]].map(x=>`<tr><td>${x[0]}</td><td class="m">${esc(x[1]||'—')}</td><td class="m">${esc(x[2]||'—')}</td></tr>`)),
+ 'Ruta':()=>{const o=r.hops.find(h=>h.ip&&!/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h.ip));return(o?`<p class="hint">${ic('route',14)}IP de origen estimada: <b class="m">${esc(o.ip)}</b>${o.rd&&o.rd!=='unknown'?' ('+esc(o.rd)+')':''}. Los saltos «localhost» o con IP privada son internos del servidor que reenvía el mensaje.</p>`:'')+tb(['#','Desde (HELO)','DNS inverso','IP','Por','Fecha','Notas'],r.hops.map((h,i)=>`<tr><td>${i+1}</td><td class="m">${esc(h.fr)}</td><td class="m">${esc(h.rd||'—')}</td><td class="m">${esc(h.ip||'—')}</td><td class="m">${esc(h.by)}</td><td>${esc(h.dt)}</td><td>${h.n.map(x=>`<span class="tl ${/DNS|HELO/.test(x)?'md':'info'}">${esc(x)}</span>`).join('')||'—'}</td></tr>`))},
+ 'Enlaces':()=>tb(['Texto visible','Destino real','URL decodificada','Señales'],r.LA.map(l=>{let d='—';try{const x=decodeURIComponent(l.href);if(x!==l.href)d=x}catch(e){}return`<tr><td>${esc(l.text.slice(0,80)||(l.dec?'(URL oculta en un parámetro)':'—'))}</td><td class="m">${l.via?`<span class="tl info">${esc(l.via)}</span> ${esc(l.dest.slice(0,200))}`:esc(l.href.slice(0,200))}</td><td class="m">${esc(d.slice(0,200))}</td><td>${l.f.map(([s,t])=>`<span class="tl ${SV[s][1]}">${esc(t)}</span>`).join('')||'—'}</td></tr>`}))+'<h3>Parámetros decodificados (URL, Base64, hex)</h3>'+tb(['Enlace','Dónde','Original','Decodificado'],r.dec.map(d=>`<tr><td class="m">${esc(d.host)}</td><td>${esc(d.where)}${d.key?': <span class="m">'+esc(d.key)+'</span>':''}<br><span class="tl info">${d.ch.join(' → ')}</span></td><td class="m">${esc(d.raw.slice(0,160))}</td><td class="m">${esc(d.out.slice(0,300))}</td></tr>`)),
+ 'Adjuntos':()=>tb(['Nombre','Tipo','Tamaño','SHA-256'],r.o.att.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${(a.size/1024).toFixed(1)} KB</td><td class="m">${a.sha}</td></tr>`)),
+ 'Cabeceras':()=>tb(['Cabecera','Valor'],E.hs.map(h=>`<tr><td class="m">${esc(h[0])}</td><td class="m">${esc(h[1].slice(0,400))}</td></tr>`))};
+ $('#tabs').innerHTML=Object.keys(T).map((k,i)=>`<button data-k="${k}" class="${i?'':'a'}">${ic(TI[k],15)}${k}</button>`).join('');
+ const set=k=>{$('#pane').innerHTML=T[k]();document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('a',b.dataset.k===k));
+  if(k==='Conversación')convInit();
+  if(k==='Vista'){const vw=m=>{document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('a',b.dataset.v===m));const c=$('#vw');c.innerHTML='';
+   if(m==='html'){const f=document.createElement('iframe');f.setAttribute('sandbox','');f.className='fr';f.srcdoc='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; font-src data:"><base target="_blank">'+cidfix(r.o.html,r.o.att);c.appendChild(f)}
+   else{const p=document.createElement('pre');p.textContent=(r.o.text||r.txt||'(cuerpo vacío)').trim().slice(0,20000);c.appendChild(p)}};
+   document.querySelector('.seg').onclick=e=>{if(e.target.dataset.v)vw(e.target.dataset.v)};vw(r.o.html?'html':'text')}};
+ $('#tabs').onclick=e=>{const b=e.target.closest('button');if(b)set(b.dataset.k)};set('Hallazgos');scrollTo(0,0)}
+async function runMany(it){try{ALL=[];CONS.all=false;CONS.set.clear();for(const x of it){const r=await analyze(x.raw);r.name=x.name;ALL.push(r)}show(ALL[0])}catch(e){alert('No se pudo analizar el archivo: '+e.message)}}
+const run=raw=>runMany([{name:'Correo',raw}]);
+const fl=async fs=>{fs=[...fs||[]];if(!fs.length)return;try{runMany(await Promise.all(fs.map(async f=>{const u=new Uint8Array(await f.arrayBuffer());return{name:f.name,raw:u[0]===0xD0&&u[1]===0xCF?msg2eml(u):u2b(u)}})))}catch(e){alert('No se pudo leer el archivo: '+e.message)}};
+$('#file').onchange=e=>fl(e.target.files);
+const dr=$('#drop');['dragover','dragenter'].forEach(t=>dr.addEventListener(t,e=>{e.preventDefault();dr.classList.add('on')}));
+['dragleave','drop'].forEach(t=>dr.addEventListener(t,e=>{e.preventDefault();dr.classList.remove('on')}));
+dr.addEventListener('drop',e=>fl(e.dataTransfer.files));
+$('#bp').onclick=()=>$('#pw').classList.toggle('hid');
+$('#go').onclick=()=>$('#ta').value.trim()?run($('#ta').value):$('#ta').focus();
+$('#nw').onclick=()=>{$('#out').classList.add('hid');$('#in').classList.remove('hid');$('#file').value=''};
+$('#cp').onclick=async()=>{const doms=[...new Set([R.fr.domain,R.snd.domain,R.rt.domain,...R.LA.map(l=>l.host)].filter(Boolean))].map(defang),ips=[...new Set(R.hops.map(h=>h.ip).filter(x=>x&&!/^(10\.|127\.|192\.168\.)/.test(x)))],hs=R.o.att.map(a=>a.name+' '+a.sha);
+ const t=['Dominios:',...doms,'','IPs:',...ips,'','Adjuntos (SHA-256):',...hs].join('\n');try{await navigator.clipboard.writeText(t);ib('#cp','check','Copiado')}catch(e){ib('#cp','info','No se pudo copiar')}setTimeout(()=>ib('#cp','copy','Copiar indicadores (IOC)'),1800)};
+$('#bs').onclick=()=>run(`Received: from mail.paypa1-secure-login.top ([185.220.101.47]) by mx.example.es; Tue, 29 Sep 2026 08:14:02 +0200
+Authentication-Results: mx.example.es; spf=fail smtp.mailfrom=paypa1-secure-login.top; dkim=none; dmarc=fail
+Return-Path: <bounce@paypa1-secure-login.top>
+Sender: <envios@mailer-relay.ru>
+From: "PayPal Seguridad <soporte@paypal.com>" <alerta@paypa1-secure-login.top>
+Reply-To: <cobros.urgentes@gmail.com>
+To: cliente@example.es
+Subject: Accion requerida: su cuenta sera suspendida
+Date: Tue, 29 Sep 2026 08:13:40 +0200
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="B1"
+
+--B1
+Content-Type: text/html; charset=utf-8
+
+<p>Estimado cliente,</p><p>Hemos detectado <b>actividad inusual</b> en su cuenta. Verifique su identidad en las proximas 24 horas o su cuenta sera bloqueada.</p><p><a href="http://paypa1-secure-login.top/verify?id=8842&u=Y2xpZW50ZUBleGFtcGxlLmVz&next=aHR0cHM6Ly9jcmVkLWNvbGxlY3Qud29ya3MvbG9naW4%3D">https://www.paypal.com/verificar</a></p><form action="http://x.top"><input type="password" name="p"></form><img src="http://track.top/p.gif" width="1" height="1">
+--B1
+Content-Type: text/html; name="factura.pdf.html"
+Content-Disposition: attachment; filename="factura.pdf.html"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGZvcm0+PC9mb3JtPjwvaHRtbD4=
+--B1
+Content-Type: message/rfc822
+
+From: soporte@esed.example
+To: cliente@example.es
+Subject: Re: Ticket 4821
+Date: Mon, 28 Sep 2026 10:02:00 +0200
+Message-ID: <a1@esed.example>
+Content-Type: text/html; charset=utf-8
+
+<p>Hola, ya hemos revisado el ticket 4821.</p><img src="https://track.mailer.example/o/abc123.gif" width="1" height="1">
+--B1--
+`);
+$('h1').insertAdjacentHTML('afterbegin',ic('mail',20));$('#drop').insertAdjacentHTML('afterbegin',ic('upload',30));
+ib('#bp','clipboard','Pegar código fuente');ib('#bs','flask','Probar con un ejemplo');ib('#cp','copy','Copiar indicadores (IOC)');ib('#nw','arrow-left','Analizar otro correo');
+</script></body></html>
