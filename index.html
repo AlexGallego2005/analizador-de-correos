@@ -58,6 +58,7 @@ button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
 .cons{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}.cons .hq{margin:0}
 .cn{border:1px solid var(--ln);border-radius:8px;padding:12px 14px;margin:8px 0 12px}.cn p{margin:0 0 10px;font-size:13.5px}.row2{display:flex;gap:8px}
 button.sm{padding:5px 10px;font-size:13px}
+.sb{display:flex;justify-content:space-between;font-size:13.5px;margin-top:8px;color:var(--mu)}
 @media(max-width:860px){.lay{grid-template-columns:1fr;gap:18px}aside{position:static}.btns{flex-direction:row}}
 </style></head><body><div class="wrap">
 <header><h1>Analizador de phishing (.eml y .msg)</h1><span class="sub">Se procesa en tu navegador</span></header>
@@ -139,6 +140,8 @@ function mm(C,M,d,hs){const B='=_m'+d,P=M.p(hs),keep=[];let ok=0;
   if(em&&d<4)parts.push('Content-Type: message/rfc822\r\nContent-Disposition: attachment; filename="'+h47(fn)+'"\r\n\r\n'+mm(C,mapi(C,em),d+1,24));
   else{const b=A.b('3701');if(b)parts.push('Content-Type: '+mt+'; name="'+h47(fn)+'"\r\nContent-Disposition: '+(cid?'inline':'attachment')+'; filename="'+h47(fn)+'"\r\n'+(cid?'Content-ID: <'+cid+'>\r\n':'')+'Content-Transfer-Encoding: base64\r\n\r\n'+btoa(u2b(b)))}});
  return keep.join('\r\n')+'\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="'+B+'"\r\n\r\n'+parts.map(p=>'--'+B+'\r\n'+p+'\r\n').join('')+'--'+B+'--\r\n'}
+const ZW=/[\u200B-\u200F\u2060-\u2064\u00AD\u034F\u180E\uFEFF\u202A-\u202E\u2066-\u2069]/g,ZW1=/[\u200B-\u200F\u2060-\u2064\u00AD\u034F\u180E\uFEFF\u202A-\u202E\u2066-\u2069]/;
+function sb(k,v){const q=VD(v);return`<div class="sb"><span>${k}</span><b class="t-${q[1]}">${q[0]}</b></div>`}
 function ent(raw){const m=raw.match(/\r?\n\r?\n/);let h=raw,b='';if(m){h=raw.slice(0,m.index);b=raw.slice(m.index+m[0].length)}
  const hs=[];h.replace(/\r?\n[ \t]+/g,' ').split(/\r?\n/).forEach(l=>{const m=l.match(/^([\w.-]+)(?:\s*:\s*|\t+)(.*)$/);if(m)hs.push([m[1],w47(m[2].trim())])});return{hs,b}}
 const H=(e,n)=>e.hs.filter(h=>h[0].toLowerCase()===n).map(h=>h[1]),H1=(e,n)=>H(e,n)[0]||'';
@@ -156,6 +159,7 @@ function reg(h){h=h.toLowerCase().replace(/\.$/,'');if(/^[\d.]+$/.test(h)||h.inc
 function adr(s){const m=s.match(/<([^>]+)>/),a=(m?m[1]:s.replace(/\(.*?\)/g,'')).trim(),em=a.match(/[^\s<>"',;]+@[^\s<>"',;]+/);
  return{email:em?em[0].toLowerCase():'',name:m?s.slice(0,m.index).replace(/^\s*"|"\s*$/g,'').trim():'',domain:em?reg(em[0].split('@')[1]):''}}
 const BR={paypal:['paypal.com'],microsoft:['microsoft.com','microsoftonline.com','office.com','live.com','outlook.com','office365.com','sharepoint.com'],google:['google.com','gmail.com','googlemail.com','googleusercontent.com','gstatic.com'],apple:['apple.com','icloud.com'],amazon:['amazon.com','amazon.es','amazon.co.uk','amazonaws.com'],netflix:['netflix.com'],facebook:['facebook.com','facebookmail.com','fb.com'],instagram:['instagram.com'],linkedin:['linkedin.com'],dropbox:['dropbox.com'],docusign:['docusign.com','docusign.net'],dhl:['dhl.com','dhl.de'],correos:['correos.es'],fedex:['fedex.com'],bbva:['bbva.es','bbva.com'],santander:['santander.com','santander.es','gruposantander.com'],caixabank:['caixabank.es','caixabank.com'],binance:['binance.com'],coinbase:['coinbase.com'],whatsapp:['whatsapp.com'],agenciatributaria:['agenciatributaria.gob.es','agenciatributaria.es']};
+BR.teams=BR.onedrive=BR.sharepoint=BR.microsoft;
 function brand(h){const r=reg(h),n=h.toLowerCase().replace(/0/g,'o').replace(/1/g,'l').replace(/3/g,'e').replace(/5/g,'s');for(const k in BR)if(n.includes(k)&&!BR[k].includes(r))return k;return''}
 const SH=new Set(['bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','is.gd','cutt.ly','rebrand.ly','buff.ly','shorturl.at','t.ly','rb.gy']);
 const TLD=new Set(['zip','mov','xyz','top','click','work','gq','tk','ml','cf','ga','icu','cyou','buzz','rest','sbs','cfd','lol','monster']);
@@ -175,7 +179,7 @@ function ana(l){let u;try{u=new URL(l.href)}catch(e){return null}const p=u.proto
  if(p==='mailto:'||p==='tel:')return null;
  if(p==='javascript:'||p==='data:'){return{...l,host:p,f:[['high','Enlaces que ejecutan código']]}}
  if(!/^https?:$/.test(p))return null;
- const w=unwrap(u);if(w){if(!w.dest)return{...l,host:u.hostname,f:[],via:w.name,dest:'(destino no visible)'};const i=ana({href:w.dest,text:l.text});if(i)return{...i,href:l.href,via:w.name,dest:w.dest}}
+ const w=unwrap(u);if(w){if(!w.dest)return{...l,host:u.hostname,f:[],via:w.name,dest:'(destino no visible)'};const i=ana({href:w.dest,text:l.text});if(i)return{...i,href:l.href,via:w.name,dest:w.dest,zw:l.zw}}
  const h=u.hostname,tld=h.split('.').pop();
  if(/^\d+\.\d+\.\d+\.\d+$/.test(h))f.push(['high','Enlaces que usan una IP en vez de un dominio']);
  if(/xn--/.test(h)||/[^\x00-\x7f]/.test(l.href.split('/')[2]||''))f.push(['high','Dominios con caracteres engañosos (punycode)']);
@@ -183,6 +187,7 @@ function ana(l){let u;try{u=new URL(l.href)}catch(e){return null}const p=u.proto
  const b=brand(h);if(b)f.push(['high','Dominios que imitan a una marca ('+b+')']);
  const tm=l.text.match(/(?:https?:\/\/)?((?:[a-z0-9-]+\.)+[a-z]{2,})/i);
  if(tm&&reg(tm[1])!==reg(h))f.push(['high','El texto del enlace muestra un dominio y el destino es otro']);
+ const bt=(l.text||'').toLowerCase();if(bt&&bt.length<=60)for(const k in BR)if(bt.includes(k)&&!BR[k].includes(reg(h))){f.push(['high','El texto del enlace nombra una marca ('+k+') y el destino es otro dominio']);break}
  if(SH.has(reg(h)))f.push(['med','Acortadores de enlaces']);
  if(TLD.has(tld))f.push(['med','Dominios con extensión de riesgo (.'+tld+')']);
  if(p==='http:')f.push(['low','Enlaces sin HTTPS']);
@@ -246,7 +251,7 @@ function decs(LA){const R=[];
  return R}
 async function sha(b){try{const d=await crypto.subtle.digest('SHA-256',b2u(b));return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return'no disponible'}}
 async function analyze(raw){
- const e=ent(raw),o={text:'',html:'',att:[],sub:[]};walk(raw,o);const F=[],add=(s,t,d,p)=>F.push({s,t,d,p:p??P[s]});
+ const e=ent(raw),o={text:'',html:'',att:[],sub:[]};walk(raw,o);let cat='e';const F=[],add=(s,t,d,p)=>F.push({s,t,d,c:cat,p:p??P[s]});
  const fr=adr(H1(e,'from')),rt=adr(H1(e,'reply-to')),rp=adr(H1(e,'return-path')),snd=adr(H1(e,'sender')),mid=(H1(e,'message-id').match(/@([^>\s]+)/)||[])[1]||'';
  if(!fr.email)add('high','Falta el remitente (From)','No se pudo leer una dirección válida en la cabecera From.');
  if(rt.email&&rt.domain!==fr.domain)add('high','Reply-To distinto del remitente','Las respuestas irían a '+rt.email+' y no a '+fr.email+'.',14);
@@ -262,7 +267,7 @@ async function analyze(raw){
  if(rp.email&&rp.domain!==fr.domain)add('med','Return-Path de otro dominio','El sobre usa '+rp.domain+' y el remitente visible usa '+fr.domain+'. Es normal en servicios de envío masivo.',6);
  const nm=fr.name.match(/[\w.+-]+@([\w.-]+)/);
  if(nm&&reg(nm[1])!==fr.domain)add('high','Nombre visible con otra dirección','El nombre "'+fr.name+'" muestra una dirección distinta a la real ('+fr.email+').',18);
- for(const k in BR)if(fr.name.toLowerCase().includes(k)&&!BR[k].includes(fr.domain)){add('high','Suplantación de marca en el nombre','El nombre menciona "'+k+'" pero el dominio real es '+fr.domain+'.',18);break}
+ for(const k in BR)if(fr.name.toLowerCase().includes(k)&&!BR[k].includes(fr.domain)){cat='c';add('high','Suplantación de marca en el nombre','El nombre menciona "'+k+'" pero el dominio real es '+fr.domain+'.',18);cat='e';break}
  const bf=fr.domain&&brand(fr.domain);if(bf)add('high','Dominio del remitente imita a una marca',fr.domain+' se parece a '+bf+' sin ser un dominio oficial.',20);
  if(/xn--/.test(fr.domain))add('high','Dominio del remitente en punycode','Puede ser un homógrafo que imita otro dominio.',15);
  if(!H1(e,'message-id'))add('med','Sin Message-ID','Los servidores legítimos siempre lo añaden.',5);else if(mid&&fr.domain&&reg(mid)!==fr.domain)add('low','Message-ID de otro dominio','Generado por '+reg(mid)+'.');
@@ -275,24 +280,31 @@ async function analyze(raw){
  if(cf.length)add('high','Resultados de autenticación contradictorios','En '+cf.map(k=>k.toUpperCase()).join(' y ')+' un servidor indica pass y otro fail. Suele ocurrir cuando un gateway reenvía el mensaje y lo vuelve a autenticar desde su propia IP: prevalece el resultado original, que es el fallido.',15);
  if(!ks.some(k=>au[k])){if(!H1(e,'x-analizador-nota'))add('med','Sin resultados de autenticación','No hay SPF, DKIM ni DMARC. Puede ocurrir en correos exportados o reenviados.',6)}
  else{ks.forEach(k=>{const v=au[k];if(!v)return;const U=k.toUpperCase();
-  if(v==='pass')add('ok',U+' correcto','El servidor receptor validó '+U+'.');
+  if(/pass$/.test(v))add('ok',U+' correcto','El servidor receptor validó '+U+'.');
   else if(/fail|error/.test(v))add('high',U+' no supera la validación','Resultado: '+v+' (según '+aS[k]+').',v==='softfail'?6:k==='dmarc'?15:12);
   else add('low',U+' sin política ('+v+')','El dominio no publica o no aplica esta protección.')})}
- const txt=o.text||(o.html?new DOMParser().parseFromString(o.html,'text/html').body.textContent:'');
+ cat='c';const txt=o.text||(o.html?new DOMParser().parseFromString(o.html,'text/html').body.textContent:'');
  const hits=[...new Set(((H1(e,'subject')+' '+txt).match(KW)||[]).map(x=>x.toLowerCase()))];
  if(hits.length>=3)add('med','Lenguaje de urgencia o presión','Términos detectados: '+hits.slice(0,8).join(', ')+'.',hits.length>=5?12:8);
  else if(hits.length)add('low','Algunas palabras típicas de phishing',hits.join(', ')+'.');
  if(/origen sospechoso|\bspam\b|phish|suspicious|sospechos[oa]/i.test(H1(e,'subject')))add('med','El filtro de correo ya lo ha marcado','El asunto lleva una etiqueta añadida por un gateway o antispam: «'+H1(e,'subject').slice(0,80)+'».',8);
  if(H1(e,'x-analizador-nota'))add('low','Cabeceras reconstruidas desde el .msg',H1(e,'x-analizador-nota'),6);
  if(!o.html&&!o.text&&!o.att.length&&!o.sub.length)add('low','El archivo no incluye cuerpo','Solo hay cabeceras, así que no se pueden analizar enlaces ni adjuntos.');
- const L=[],seen=new Set();let forms=0,pw=0,pix=0;
+ const zws=((o.html||'')+(o.text||'')).match(ZW)||[];
+ if(zws.length>=3){const i=txt.search(ZW1),ex=i>=0?txt.slice(Math.max(0,i-10),i+90).replace(ZW,'').replace(/\s+/g,' ').trim():'';add('high','Texto ofuscado con caracteres invisibles',zws.length+' caracteres invisibles (espacios de ancho cero y similares) intercalados entre las letras. Sirven para que los antispam no lean frases como «'+ex+'». Un correo legítimo no lo necesita.',18)}
+ if(ZW1.test(H1(e,'subject')+fr.name))add('high','Caracteres invisibles en el asunto o el remitente','Se ocultan caracteres de control en el asunto o en el nombre del remitente.',12);
+ if(/[A-Za-z][\u0400-\u04FF\u0370-\u03FF]|[\u0400-\u04FF\u0370-\u03FF][A-Za-z]/.test(txt+H1(e,'subject')))add('high','Letras de otros alfabetos mezcladas con latinas','Hay palabras que mezclan letras latinas con cirílicas o griegas visualmente idénticas (homógrafos).',15);
+ const L=[],seen=new Set();let forms=0,pw=0,pix=0,hid=[];
  if(o.html){const d=new DOMParser().parseFromString(o.html,'text/html');
-  d.querySelectorAll('a[href]').forEach(a=>L.push({href:a.getAttribute('href').trim(),text:a.textContent.replace(/\s+/g,' ').trim()}));
-  forms=d.querySelectorAll('form').length;pw=d.querySelectorAll('input[type=password]').length;
+  d.querySelectorAll('a[href]').forEach(a=>L.push({href:a.getAttribute('href').trim(),text:a.textContent.replace(ZW,'').replace(/\s+/g,' ').trim(),zw:(a.textContent.match(ZW)||[]).length}));
+  forms=d.querySelectorAll('form').length;hid=[...d.querySelectorAll('[style]')].filter(x=>/display\s*:\s*none|visibility\s*:\s*hidden|font-size\s*:\s*0|max-height\s*:\s*0|color\s*:\s*transparent/i.test(x.getAttribute('style'))).map(x=>x.textContent.trim()).filter(Boolean);pw=d.querySelectorAll('input[type=password]').length;
   pix=[...d.querySelectorAll('img')].filter(i=>(i.getAttribute('width')==='1'&&i.getAttribute('height')==='1')||/width:\s*1px/.test(i.getAttribute('style')||'')).length}
  (txt.match(/https?:\/\/[^\s<>"')\]]+/g)||[]).forEach(u=>L.push({href:u,text:''}));
  const LA=L.filter(l=>{const k=l.href+'|'+l.text;if(seen.has(k))return false;seen.add(k);return true}).map(ana).filter(Boolean);
  const DEC=decs(LA);DEC.filter(d=>!d.via).forEach(d=>d.urls.forEach(u=>{const k=u+'|(dec)';if(seen.has(k))return;seen.add(k);const a=ana({href:u,text:''});if(a){a.dec=1;LA.push(a)}}));
+ const rq=[...new Set([...tos.map(x=>reg(x.split('@')[1]||'')),fr.domain].filter(Boolean))].map(d=>[d,d.split('.')[0]]).filter(x=>x[1].length>=4);
+ LA.forEach(l=>{const h=l.host||'';if(!h||/^[\d.:]+$/.test(h)||!l.f)return;const r=reg(h);if(rq.some(x=>x[0]===r))return;const sub=h.slice(0,Math.max(0,h.length-r.length)).replace(/\.$/,'').toLowerCase();if(!sub)return;
+  const hit=rq.find(([d,n])=>sub.split('.').some(q=>q===n||q.replace(/-/g,'')===n)||sub.includes(d));if(hit)l.f.push(['high','Subdominio que imita al dominio del destinatario o del remitente ('+hit[0]+')'])});
  const RD=[],chk=(h,t)=>{const c=chain(t),a=c.hosts;if(a.length>=2&&TRD.test(reg(a[0]))&&!TRD.test(reg(a[a.length-1]))&&reg(a[a.length-1])!==reg(a[0]))RD.push(c)};
  DEC.forEach(d=>chk(d.host,d.out));LA.filter(l=>!l.via&&!l.dec).forEach(l=>{let x=l.href;try{x=decodeURIComponent(x)}catch(e){}chk(l.host,x)});
  RD.forEach(c=>{const k=c.fin+'|(red)';if(!seen.has(k)){seen.add(k);const a=ana({href:c.fin,text:''});if(a){a.dec=1;LA.push(a)}}});
@@ -305,6 +317,9 @@ async function analyze(raw){
  if(um.length)add('med','URL de otro dominio oculta en un parámetro codificado','Destino decodificado: '+[...new Set(um.flatMap(d=>d.urls.map(u=>{try{return new URL(u).hostname}catch(e){return u}})))].slice(0,4).join(', ')+'. Revisa el destino final.',10);
  if(em.length)add('med','Dirección de correo codificada en un enlace','Aparece '+em[0].mails[0]+' dentro de un parámetro. Es habitual en kits de phishing que rellenan el formulario con los datos de la víctima.',8);
  if(pw)add('high','Campo de contraseña dentro del correo','El correo intenta recoger credenciales directamente.',20);else if(forms)add('med','Formulario incrustado','Los formularios en correos son poco habituales y suelen indicar phishing.',10);
+ const hl=hid.join('').length;
+ if(hl>=150)add('med','Texto oculto extenso',hl+' caracteres ocultos con CSS (display:none, tamaño 0…). Se usan para despistar a los filtros.',8);
+ else if(hl)add('low','Texto oculto','Hay '+hl+' caracteres ocultos con CSS («'+hid.join(' ').slice(0,40)+'»): suele ser un identificador de seguimiento o un preheader.');
  const TR=trk(o.html,e),trs=TR.it.filter(x=>x.tr);
  if(trs.length)add('low','Rastreador de apertura',trs.length+' elemento(s) avisan al remitente cuando se carga el correo ('+[...new Set(trs.map(x=>x.host))].slice(0,3).join(', ')+'). Aquí no se cargan.');
  else if(TR.it.length)add('low','Contenido remoto','Hay '+TR.it.length+' recurso(s) externos que revelarían tu IP y la hora de apertura si se cargaran.');
@@ -314,18 +329,19 @@ async function analyze(raw){
   else if(EH.has(x))add('high','Adjunto ejecutable',a.name+' puede ejecutar código al abrirse.',25);
   else if(['docm','xlsm','pptm'].includes(x))add('med','Documento con macros',a.name+' puede contener macros maliciosas.',15);
   else if(EM.has(x))add('med','Adjunto de riesgo ('+x+')',a.name+' es un formato habitual para ocultar malware o páginas falsas.',10)}
- const priv=ip=>/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(ip)||/^(::1|fe80|fc|fd)/i.test(ip);
+ cat='e';const priv=ip=>/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(ip)||/^(::1|fe80|fc|fd)/i.test(ip);
  const hops=H(e,'received').map(v=>{const w=v.replace(/\bid\s+[\w.-]+/gi,''),f=w.match(/from\s+(\S+)\s*(?:\(([^)]*)\))?/i)||[],inn=f[2]||'',helo=f[1]||'',
   ip=(inn.match(/((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7})/i)||[])[1]||(helo.match(/^\[?((?:\d{1,3}\.){3}\d{1,3})\]?$/)||[])[1]||'',
   rd=(inn.match(/^([^\s\[]+)/)||[])[1]||'',n=[];
   if(/^localhost$/i.test(helo)||/^(127\.|::1)/.test(ip))n.push('Salto interno (loopback)');else if(ip&&priv(ip))n.push('IP privada');
-  if(/^\[?\d+\.\d+\.\d+\.\d+\]?$/.test(helo))n.push('HELO con IP literal');
+  if(/^\[?\d+\.\d+\.\d+\.\d+\]?$/.test(helo)&&!/^\[?127\./.test(helo))n.push('HELO con IP literal');
   if(/^unknown$/i.test(rd))n.push('Sin DNS inverso');
   return{fr:helo,rd,ip,by:(w.match(/\bby\s+(\S+)/i)||[])[1]||'',dt:(v.split(';').pop()||'').trim(),n}}).reverse();
  const org=hops.find(h=>h.ip&&!priv(h.ip));
  if(org&&org.n.some(x=>/DNS|HELO/.test(x)))add('med','Servidor de origen poco fiable','El primer servidor público ('+org.ip+') presenta: '+org.n.filter(x=>/DNS|HELO/.test(x)).join(' y ').toLowerCase()+'. Los servidores de correo legítimos suelen tener nombre propio.',8);
- const score=Math.min(100,F.reduce((a,f)=>a+f.p,0));
- return{e,o,F,fr,rt,rp,snd,mid,au,LA,dec:DEC,hops,score,txt,hits,msgs:flat(e,o)}}
+ const xo=H1(e,'x-originating-ip').replace(/[\[\]\s]/g,'');if(xo&&org&&xo!==org.ip)add('low','Dos IPs de origen distintas','X-Originating-IP indica '+xo+' y la primera IP pública en Received es '+org.ip+'. Puede deberse a un proxy, una VPN o a que el cliente de correo la añadió él mismo.');
+ const score=Math.min(100,F.reduce((a,f)=>a+f.p,0)),sc=k=>Math.min(100,F.filter(f=>f.c===k).reduce((a,f)=>a+f.p,0));
+ return{e,o,F,fr,rt,rp,snd,mid,au,LA,dec:DEC,hops,score,txt,hits,msgs:flat(e,o),sE:sc('e'),sC:sc('c')}}
 
 const VD=s=>s<15?['Riesgo bajo','ok','No se aprecian señales claras de phishing.']:s<40?['Sospechoso','md','Hay señales que conviene revisar antes de actuar.']:s<70?['Riesgo alto','hi','Varias señales típicas de phishing.']:['Phishing probable','hi','No abras enlaces ni adjuntos.'];
 const SV={high:['Alto','hi'],med:['Medio','md'],low:['Bajo','info'],ok:['Correcto','ok']},ORD={high:0,med:1,low:2,ok:3};
@@ -364,16 +380,16 @@ const W='Al cargar contenido externo, los remitentes y los servidores de seguimi
 let R,ALL=[];
 function show(r){R=r;const[v,c,d]=VD(r.score),n=k=>r.F.filter(f=>f.s===k).length;
  $('#in').classList.add('hid');$('#out').classList.remove('hid');
- $('#vd').className='vd t-'+c;$('#vd').innerHTML=`<div class="n">${r.score}<small>/100</small></div><h2>${ic(c==='ok'?'shield-check':'shield-alert',20)}${v}</h2><p>${d} ${n('high')} alto, ${n('med')} medio, ${n('low')} bajo.</p>`;
+ $('#vd').className='vd t-'+c;$('#vd').innerHTML=`<div class="n">${r.score}<small>/100</small></div><h2>${ic(c==='ok'?'shield-check':'shield-alert',20)}${v}</h2><p>${d} ${n('high')} alto, ${n('med')} medio, ${n('low')} bajo.</p>${sb('Envío',r.sE)}${sb('Contenido',r.sC)}`;
 
  const E=r.e;$('#selw').innerHTML=ALL.length>1?'<select id="sel">'+ALL.map((a,i)=>`<option value="${i}"${a===r?' selected':''}>${esc(a.name)}</option>`).join('')+'</select>':'';if(ALL.length>1)$('#sel').onchange=ev=>show(ALL[+ev.target.value]);const sd=r.snd.email&&r.snd.email!==r.fr.email;$('#meta').innerHTML=[['Asunto',H1(E,'subject')],['Sender',H1(E,'sender'),sd],['De',H1(E,'from')],['Para',H1(E,'to')],['Fecha',H1(E,'date')]].map(([k,x,b])=>`<dt>${k}</dt><dd${b?' class="t-hi"':''}>${esc(x||'—')}</dd>`).join('');
  const T={
  'Hallazgos':()=>[...r.F].sort((a,b)=>ORD[a.s]-ORD[b.s]).map(f=>`<div class="f"><span class="bd ${SV[f.s][1]}">${ic(SI[f.s],15)}${SV[f.s][0]}</span><div><b>${esc(f.t)}</b><p>${esc(f.d)}</p></div></div>`).join('')||'<p>Sin hallazgos.</p>',
  'Conversación':()=>convHtml(),
  'Vista':()=>`<div class="seg">${r.o.html?'<button data-v="html">HTML</button>':''}<button data-v="text">Texto plano</button></div><p class="hint">Vista aislada: sin scripts, sin imágenes remotas y sin enlaces activos.</p><div id="vw"></div>`,
- 'Identidad':()=>`<div class="chips">${['spf','dkim','dmarc'].map(k=>{const x=r.au[k]||'sin dato';return`<div class="chip ${x==='pass'?'ok':/fail|error/.test(x)?'hi':'info'}">${k.toUpperCase()}<span>${esc(x)}</span></div>`}).join('')}</div>`+tb(['Campo','Valor','Dominio'],[['Sender',H1(E,'sender'),r.snd.domain],['From',H1(E,'from'),r.fr.domain],['Reply-To',H1(E,'reply-to'),r.rt.domain],['Return-Path',H1(E,'return-path'),r.rp.domain],['Message-ID',H1(E,'message-id'),r.mid]].map(x=>`<tr><td>${x[0]}</td><td class="m">${esc(x[1]||'—')}</td><td class="m">${esc(x[2]||'—')}</td></tr>`)),
+ 'Identidad':()=>`<div class="chips">${['spf','dkim','dmarc'].map(k=>{const x=r.au[k]||'sin dato';return`<div class="chip ${/pass$/.test(x)?'ok':/fail|error/.test(x)?'hi':'info'}">${k.toUpperCase()}<span>${esc(x)}</span></div>`}).join('')}</div>`+tb(['Campo','Valor','Dominio'],[['Sender',H1(E,'sender'),r.snd.domain],['From',H1(E,'from'),r.fr.domain],['Reply-To',H1(E,'reply-to'),r.rt.domain],['Return-Path',H1(E,'return-path'),r.rp.domain],['Message-ID',H1(E,'message-id'),r.mid]].map(x=>`<tr><td>${x[0]}</td><td class="m">${esc(x[1]||'—')}</td><td class="m">${esc(x[2]||'—')}</td></tr>`)),
  'Ruta':()=>{const o=r.hops.find(h=>h.ip&&!/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h.ip));return(o?`<p class="hint">${ic('route',14)}IP de origen estimada: <b class="m">${esc(o.ip)}</b>${o.rd&&o.rd!=='unknown'?' ('+esc(o.rd)+')':''}. Los saltos «localhost» o con IP privada son internos del servidor que reenvía el mensaje.</p>`:'')+tb(['#','Desde (HELO)','DNS inverso','IP','Por','Fecha','Notas'],r.hops.map((h,i)=>`<tr><td>${i+1}</td><td class="m">${esc(h.fr)}</td><td class="m">${esc(h.rd||'—')}</td><td class="m">${esc(h.ip||'—')}</td><td class="m">${esc(h.by)}</td><td>${esc(h.dt)}</td><td>${h.n.map(x=>`<span class="tl ${/DNS|HELO/.test(x)?'md':'info'}">${esc(x)}</span>`).join('')||'—'}</td></tr>`))},
- 'Enlaces':()=>tb(['Texto visible','Destino real','URL decodificada','Señales'],r.LA.map(l=>{let d='—';try{const x=decodeURIComponent(l.href);if(x!==l.href)d=x}catch(e){}return`<tr><td>${esc(l.text.slice(0,80)||(l.dec?'(URL oculta en un parámetro)':'—'))}</td><td class="m">${l.via?`<span class="tl info">${esc(l.via)}</span> ${esc(l.dest.slice(0,200))}`:esc(l.href.slice(0,200))}</td><td class="m">${esc(d.slice(0,200))}</td><td>${l.f.map(([s,t])=>`<span class="tl ${SV[s][1]}">${esc(t)}</span>`).join('')||'—'}</td></tr>`}))+'<h3>Parámetros decodificados (URL, Base64, hex)</h3>'+tb(['Enlace','Dónde','Original','Decodificado'],r.dec.map(d=>`<tr><td class="m">${esc(d.host)}</td><td>${esc(d.where)}${d.key?': <span class="m">'+esc(d.key)+'</span>':''}<br><span class="tl info">${d.ch.join(' → ')}</span></td><td class="m">${esc(d.raw.slice(0,160))}</td><td class="m">${esc(d.out.slice(0,300))}</td></tr>`)),
+ 'Enlaces':()=>tb(['Texto visible','Destino real','URL decodificada','Señales'],r.LA.map(l=>{let d='—';try{const x=decodeURIComponent(l.href);if(x!==l.href)d=x}catch(e){}return`<tr><td>${esc(l.text.slice(0,80)||(l.dec?'(URL oculta en un parámetro)':'—'))}${l.zw?` <span class="tl md">${l.zw} car. invisibles</span>`:''}</td><td class="m">${l.via?`<span class="tl info">${esc(l.via)}</span> ${esc(l.dest.slice(0,200))}`:esc(l.href.slice(0,200))}</td><td class="m">${esc(d.slice(0,200))}</td><td>${l.f.map(([s,t])=>`<span class="tl ${SV[s][1]}">${esc(t)}</span>`).join('')||'—'}</td></tr>`}))+'<h3>Parámetros decodificados (URL, Base64, hex)</h3>'+tb(['Enlace','Dónde','Original','Decodificado'],r.dec.map(d=>`<tr><td class="m">${esc(d.host)}</td><td>${esc(d.where)}${d.key?': <span class="m">'+esc(d.key)+'</span>':''}<br><span class="tl info">${d.ch.join(' → ')}</span></td><td class="m">${esc(d.raw.slice(0,160))}</td><td class="m">${esc(d.out.slice(0,300))}</td></tr>`)),
  'Adjuntos':()=>tb(['Nombre','Tipo','Tamaño','SHA-256'],r.o.att.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${(a.size/1024).toFixed(1)} KB</td><td class="m">${a.sha}</td></tr>`)),
  'Cabeceras':()=>tb(['Cabecera','Valor'],E.hs.map(h=>`<tr><td class="m">${esc(h[0])}</td><td class="m">${esc(h[1].slice(0,400))}</td></tr>`))};
  $('#tabs').innerHTML=Object.keys(T).map((k,i)=>`<button data-k="${k}" class="${i?'':'a'}">${ic(TI[k],15)}${k}</button>`).join('');
