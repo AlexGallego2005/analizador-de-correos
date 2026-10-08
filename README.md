@@ -1,2 +1,1 @@
-# analizador-de-correos
-Analizador en .HTML local para archivos .EML y .MSG
+**Descargo de responsabilidad y transparencia**: El siguiente código está escrito totalmente por claude.ai desde la página web. Todo el procesamiento y análisis del archivo de correo se hace de manera local. El único motivo de compartir el resultado es por la utilidad que ofrece para saber si un correo entrante es _phishing_ o no.
