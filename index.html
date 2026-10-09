@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Analizador de phishing (.eml y .msg)</title>
+<title>Analizador de correos</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f5f6f8;--sf:#fff;--ink:#141821;--mu:#667085;--ln:#e3e6ec;--ac:#3557ff;--acb:#eaeeff;--hi:#d92d3a;--hib:#fdebec;--md:#a5680a;--mdb:#fff3d9;--ok:#1a8f5a;--okb:#e2f5eb;--in:#5b6472;--inb:#eceff4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -59,9 +59,14 @@ button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
 .cn{border:1px solid var(--ln);border-radius:8px;padding:12px 14px;margin:8px 0 12px}.cn p{margin:0 0 10px;font-size:13.5px}.row2{display:flex;gap:8px}
 button.sm{padding:5px 10px;font-size:13px}
 .sb{display:flex;justify-content:space-between;font-size:13.5px;margin-top:8px;color:var(--mu)}
+.wrap{min-height:100vh;display:flex;flex-direction:column}
+footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:14px;border-top:1px solid var(--ln);color:var(--mu);font-size:12.5px}
+#fl{display:inline-flex;align-items:center;gap:6px}#fl .ic{margin:0}
+#ov{display:none;position:fixed;inset:12px;z-index:9;align-items:center;justify-content:center;gap:10px;border:2px solid var(--ac);border-radius:12px;background:var(--bg);color:var(--ac);font-weight:600;font-size:17px;opacity:.96;pointer-events:none}
+body.dz #ov{display:flex}#ov .ic{margin:0}
 @media(max-width:860px){.lay{grid-template-columns:1fr;gap:18px}aside{position:static}.btns{flex-direction:row}}
-</style></head><body><div class="wrap">
-<header><h1>Analizador de phishing (.eml y .msg)</h1><span class="sub">Se procesa en tu navegador</span></header>
+</style></head><body><div id="ov"></div><div class="wrap">
+<header><h1>Analizador de correos</h1></header>
 
 <section id="in">
 <label id="drop" for="file"><b>Arrastra uno o varios archivos .eml o .msg aquí</b><span>o haz clic para elegirlo</span></label>
@@ -70,7 +75,7 @@ button.sm{padding:5px 10px;font-size:13px}
 <div id="pw" class="hid"><textarea id="ta" placeholder="Pega aquí el código fuente completo del correo…" spellcheck="false"></textarea><div class="row"><button class="p" id="go">Analizar</button></div></div>
 </section>
 
-<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cp">Copiar indicadores (IOC)</button><button id="nw">Analizar otro correo</button></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section></div>
+<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cp">Copiar indicadores (IOC)</button><button id="nw">Analizar otro correo</button></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section><footer><span id="fl"></span><span>v1.8.0</span></footer></div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -402,11 +407,13 @@ function show(r){R=r;const[v,c,d]=VD(r.score),n=k=>r.F.filter(f=>f.s===k).length
  $('#tabs').onclick=e=>{const b=e.target.closest('button');if(b)set(b.dataset.k)};set('Hallazgos');scrollTo(0,0)}
 async function runMany(it){try{ALL=[];CONS.all=false;CONS.set.clear();for(const x of it){const r=await analyze(x.raw);r.name=x.name;ALL.push(r)}show(ALL[0])}catch(e){alert('No se pudo analizar el archivo: '+e.message)}}
 const run=raw=>runMany([{name:'Correo',raw}]);
-const fl=async fs=>{fs=[...fs||[]];if(!fs.length)return;try{runMany(await Promise.all(fs.map(async f=>{const u=new Uint8Array(await f.arrayBuffer());return{name:f.name,raw:u[0]===0xD0&&u[1]===0xCF?msg2eml(u):u2b(u)}})))}catch(e){alert('No se pudo leer el archivo: '+e.message)}};
+const fl=async fs=>{fs=[...fs||[]].filter(f=>/\.(eml|msg|txt)$/i.test(f.name)||/rfc822|ms-outlook/.test(f.type));if(!fs.length){alert('Solo se admiten archivos .eml o .msg.');return}try{runMany(await Promise.all(fs.map(async f=>{const u=new Uint8Array(await f.arrayBuffer());return{name:f.name,raw:u[0]===0xD0&&u[1]===0xCF?msg2eml(u):u2b(u)}})))}catch(e){alert('No se pudo leer el archivo: '+e.message)}};
 $('#file').onchange=e=>fl(e.target.files);
-const dr=$('#drop');['dragover','dragenter'].forEach(t=>dr.addEventListener(t,e=>{e.preventDefault();dr.classList.add('on')}));
-['dragleave','drop'].forEach(t=>dr.addEventListener(t,e=>{e.preventDefault();dr.classList.remove('on')}));
-dr.addEventListener('drop',e=>fl(e.dataTransfer.files));
+const hasF=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
+document.addEventListener('dragenter',e=>{if(!hasF(e))return;e.preventDefault();$('#ov').innerHTML=ic('upload',26)+($('#out').classList.contains('hid')?'Suelta el archivo para analizarlo':'Suelta el archivo para sustituir el actual');document.body.classList.add('dz')});
+document.addEventListener('dragover',e=>{if(hasF(e))e.preventDefault()});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classList.remove('dz')});
+document.addEventListener('drop',e=>{if(!hasF(e))return;e.preventDefault();document.body.classList.remove('dz');fl(e.dataTransfer.files)});
 $('#bp').onclick=()=>$('#pw').classList.toggle('hid');
 $('#go').onclick=()=>$('#ta').value.trim()?run($('#ta').value):$('#ta').focus();
 $('#nw').onclick=()=>{$('#out').classList.add('hid');$('#in').classList.remove('hid');$('#file').value=''};
@@ -447,6 +454,6 @@ Content-Type: text/html; charset=utf-8
 <p>Hola, ya hemos revisado el ticket 4821.</p><img src="https://track.mailer.example/o/abc123.gif" width="1" height="1">
 --B1--
 `);
-$('h1').insertAdjacentHTML('afterbegin',ic('mail',20));$('#drop').insertAdjacentHTML('afterbegin',ic('upload',30));
+$('h1').insertAdjacentHTML('afterbegin',ic('mail',20));$('#fl').innerHTML=ic('shield-check',14)+'Procesamiento local';$('#drop').insertAdjacentHTML('afterbegin',ic('upload',30));
 ib('#bp','clipboard','Pegar código fuente');ib('#bs','flask','Probar con un ejemplo');ib('#cp','copy','Copiar indicadores (IOC)');ib('#nw','arrow-left','Analizar otro correo');
 </script></body></html>
