@@ -76,7 +76,7 @@ body.dz #ov{display:flex}#ov .ic{margin:0}
 <div id="pw" class="hid"><textarea id="ta" placeholder="Pega aquí el código fuente completo del correo…" spellcheck="false"></textarea><div class="row"><button class="p" id="go">Analizar</button></div></div>
 </section>
 
-<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cp">Copiar indicadores (IOC)</button><button id="nw">Analizar otro correo</button></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section><footer><span id="fl"></span><span>v1.11.1</span></footer></div>
+<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cp">Copiar indicadores (IOC)</button><button id="nw">Analizar otro correo</button></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section><footer><span id="fl"></span><span>v1.12.0</span></footer></div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -162,6 +162,10 @@ async function qrFind(o){const imgs=(o.att||[]).filter(a=>/^image\/(png|jpe?g|gi
   for(const g of G.values())if(g.length>=2&&g.length<=6){let ok=0;for(const dir of['h','v']){for(const q of[0,10,30]){const u=qdec(stitch(g.map(a=>R.get(a)),dir,q));if(u){add(u,'dividido',g.map(a=>a.name));ok=1;break}}if(ok)break}}}
  return out}
 const SECM=/(secured? message|protected message|encrypted message|secure(?:d)? (?:e-?mail|document|file)|mensaje (?:seguro|protegido|cifrado|encriptado)|message (?:s[ée]curis[ée]|prot[ée]g[ée]|chiffr[ée])|gesicherte nachricht|messaggio (?:protetto|sicuro|crittografato))/i,QRT=/(?:scan|escane\w*|scann\w*|scansion\w*|escaneie|scannen)[^.\n]{0,50}\bQR\b|\bQR\b[^.\n]{0,40}(?:code|c[oó]digo|image|imagen)/i;
+function isEnc(a){const b=a.bin;if(b.slice(0,5)==='%PDF-')return b.includes('/Encrypt');
+ if(b.slice(0,2)==='PK'){let i=b.indexOf('PK\x03\x04'),n=0;while(i>=0&&n++<30){if(b.charCodeAt(i+6)&1)return true;i=b.indexOf('PK\x03\x04',i+4)}return false}
+ return b.includes('E\0n\0c\0r\0y\0p\0t\0e\0d\0P\0a\0c\0k\0a\0g\0e')}
+function pdfInfo(b){const r={};for(const k of['JavaScript','JS','OpenAction','AA','Launch','EmbeddedFile','URI','AcroForm','XFA','RichMedia'])r[k]=(b.match(new RegExp('/'+k+'\\b','g'))||[]).length;r.uris=[...b.matchAll(/\/URI\s*\(([^)]{1,300})\)/g)].map(m=>m[1]).filter(u=>/^https?:\/\//i.test(u));return r}
 function ent(raw){const m=raw.match(/\r?\n\r?\n/);let h=raw,b='';if(m){h=raw.slice(0,m.index);b=raw.slice(m.index+m[0].length)}
  const hs=[];h.replace(/\r?\n[ \t]+/g,' ').split(/\r?\n/).forEach(l=>{const m=l.match(/^([\w.-]+)(?:\s*:\s*|\t+)(.*)$/);if(m)hs.push([m[1],w47(m[2].trim())])});return{hs,b}}
 const H=(e,n)=>e.hs.filter(h=>h[0].toLowerCase()===n).map(h=>h[1]),H1=(e,n)=>H(e,n)[0]||'';
@@ -284,8 +288,9 @@ async function analyze(raw){
  if(rt.email&&rt.domain!==fr.domain)add('high','Reply-To distinto del remitente','Las respuestas irían a '+rt.email+' y no a '+fr.email+'.',14);
  if(/^\s*(re|rv|fwd?|tr|aw|wg)\s*:/i.test(H1(e,'subject'))&&!H1(e,'in-reply-to')&&!H1(e,'references'))add('med','Falso «Re:» sin hilo de conversación','El asunto simula una respuesta, pero el mensaje no tiene In-Reply-To ni References.',8);
  if(/"?([\w.+-]+)"?\s*<\1@/i.test(H1(e,'to')))add('low','Nombre del destinatario copiado de su dirección','Típico de envíos masivos a listas de direcciones recopiladas.');
- const tos=(H1(e,'to')+' '+H1(e,'cc')).match(/[^\s<>"',;]+@[^\s<>"',;]+/g)||[];
- if(fr.email&&tos.some(x=>x.toLowerCase()===fr.email))add('high','Remitente y destinatario son la misma dirección','El mensaje dice venir de '+fr.email+' y va dirigido a esa misma cuenta. Es una táctica de suplantación habitual para generar confianza; solo es normal si te lo enviaste tú.',14);
+ const em_=/[^\s<>"',;]+@[^\s<>"',;]+/g,tv=(H1(e,'to')+' '+H1(e,'cc')).match(em_)||[],envr=[...new Set([...H(e,'delivered-to'),...H(e,'x-original-to'),...H(e,'envelope-to'),...H(e,'received').map(v=>(v.match(/\bfor\s+<?([^\s<>;]+@[^\s<>;]+?)>?\s*(?:;|$)/i)||[])[1]||'')].map(x=>(x.match(em_)||[''])[0].toLowerCase()).filter(Boolean))],tos=[...tv,...envr];
+ if(!tv.length)add('med','Sin destinatarios visibles (posible copia oculta)','Las cabeceras To y Cc están vacías'+(envr.length?'; el único destinatario que consta es '+envr.slice(0,2).join(', ')+' (según Received).':'.')+' Indica copia oculta (BCC) o envío masivo: es habitual en spam y en cuentas comprometidas que escriben a toda su libreta, aunque también en avisos legítimos a grupos.',8);
+ if(fr.email&&tv.some(x=>x.toLowerCase()===fr.email))add('high','Remitente y destinatario son la misma dirección','El mensaje dice venir de '+fr.email+' y va dirigido a esa misma cuenta. Es una táctica de suplantación habitual para generar confianza; solo es normal si te lo enviaste tú.',14);
  if(H1(e,'sender')){
   if(!snd.email)add('med','Sender ilegible','La cabecera Sender no contiene una dirección válida: "'+H1(e,'sender')+'".',8);
   else if(snd.email!==fr.email){
@@ -323,6 +328,8 @@ async function analyze(raw){
   if(A&&A.r[k]){au[k]=A.r[k];aS[k]=A.n}
   else{const a=av[k].slice().sort((x,y)=>(RK[y[0]]??1)-(RK[x[0]]??1))[0];au[k]=a[0];aS[k]=a[1];if(A&&isP(A.r.spf)&&isF(a[0])&&a[2]!==A&&pos(a[2].ip)>pos(A.ip))rel[k]=1}}
  const cf=ks.filter(k=>isF(au[k])&&av[k].some(x=>isP(x[0]))),auD={};for(const k in au)auD[k]=au[k]+(rel[k]?' (tras gateway)':'');
+ const dkd=[...H(e,'authentication-results').join(' ').matchAll(/header\.d=([\w.-]+)/gi)].map(m=>m[1].toLowerCase()).find(d=>/\.onmicrosoft\.com$/.test(d));
+ if(dkd&&!/onmicrosoft\.com$/.test(fr.domain))add('med','DKIM firmado por un tenant genérico de Microsoft','La firma es de «'+dkd+'» (un inquilino de Microsoft 365), no de '+fr.domain+'. El mensaje salió de un tenant distinto al del dominio del remitente o el dominio no tiene DKIM propio. Puede ser una cuenta comprometida, pero también un tenant del atacante que usa la dirección de otra persona.',6);
  if(A&&isP(A.r.spf)){const lt=AU.filter(u=>u!==A&&pos(u.ip)>pos(A.ip)&&Object.values(u.r).some(isF));if(lt.length)add('low','Fallos de autenticación tras pasar por un gateway','En el primer salto (IP '+A.ip+') SPF dio pass. Después el mensaje pasó por un gateway ('+lt[0].ip+') que lo reenvía y modifica el cuerpo: SPF falla porque la IP ya no es la del emisor, DKIM porque el cuerpo cambió y DMARC por ambos. Es normal con gateways como Sophos o Proofpoint; prevalece la primera comprobación.',0)}
  if(cf.length)add('high','Resultados de autenticación contradictorios','En '+cf.map(k=>k.toUpperCase()).join(' y ')+' el primer salto indica fallo y una comprobación posterior indica pass. Suele ocurrir cuando un gateway reenvía el mensaje y lo vuelve a autenticar desde su propia IP: prevalece el resultado del primer salto, que es el fallido.',15);
  if(!ks.some(k=>au[k])){if(!H1(e,'x-analizador-nota'))add('med','Sin resultados de autenticación','No hay SPF, DKIM ni DMARC. Puede ocurrir en correos exportados o reenviados.',6)}
@@ -362,12 +369,23 @@ async function analyze(raw){
  const on=ro.find(n=>nmn.includes(n)),os=ro.find(n=>sbj.includes(n)),ob=ro.find(n=>vtl.toLowerCase().split(n).length-1>=3);
  if(ctx&&on)add('high','Se hace pasar por la organización del destinatario','El nombre del remitente incluye «'+on+'», pero el mensaje sale de '+fr.domain+'.',16);
  else if(ctx&&(os||ob))add('med','Usa el nombre de la organización del destinatario','El '+(os?'asunto':'texto')+' cita «'+(os||ob)+'» repetidamente, pero el remitente es '+fr.domain+'.',8);
+ o.att.forEach(a=>{a.enc=isEnc(a);a.pdf=a.bin.slice(0,5)==='%PDF-'?pdfInfo(a.bin):null});
+ const pwd=vtl.match(/(?:pdf|file|document|archivo|documento|fichier|zip)?\s*(?:code|c[oó]digo|password|pass(?:word)?|contrase[ñn]a|mot de passe|clave|passcode|pin)\s*(?:is|es|est)?\s*[:=\-]\s*([A-Za-z0-9!@#$%^&*._-]{3,24})/i),encA=o.att.filter(a=>a.enc);
+ if(encA.length&&pwd)add('high','Adjunto con contraseña y la contraseña va en el mismo correo','«'+encA[0].name+'» está cifrado y el cuerpo da la clave («'+pwd[0].trim().slice(0,40)+'»). Poner la clave en el mismo mensaje no protege nada: solo impide que antivirus y filtros abran el archivo. Los envíos legítimos con adjuntos protegidos (bancos, nóminas, notarías) mandan la clave por otro canal.',16);
+ else if(encA.length)add('med','Adjunto cifrado que no se puede analizar','«'+encA[0].name+'» está protegido con contraseña, así que ni este análisis ni los antivirus pueden ver su contenido.',6);
+ else if(pwd&&o.att.length)add('low','El cuerpo da una clave y hay adjuntos','Menciona «'+pwd[0].trim().slice(0,40)+'», pero ningún adjunto aparece cifrado (puede usar un método de protección que no detecto).');
+ o.att.forEach(a=>{const p=a.pdf;if(!p)return;
+  if(p.JavaScript||p.JS||p.Launch||p.RichMedia)add('high','PDF con JavaScript o acciones ejecutables','«'+a.name+'» contiene '+['JavaScript','JS','Launch','RichMedia'].filter(k=>p[k]).map(k=>'/'+k).join(', ')+'.',16);
+  else if(p.EmbeddedFile)add('med','PDF con archivos incrustados','«'+a.name+'» lleva archivos dentro del PDF.',8);
+  if(p.URI&&!p.uris.length)add('low','PDF con enlaces ilegibles','«'+a.name+'» tiene '+p.URI+' referencias a enlaces'+(a.enc?', pero está cifrado y no se pueden leer.':', guardadas en una estructura comprimida.'),a.enc?4:0)});
+ if(o.att.length&&txt.length<1000&&(!tv.length||encA.length))add('low','Cuerpo breve y genérico que solo remite al adjunto','El texto es corto y no se dirige a nadie en concreto; es típico de cuentas comprometidas que reparten el mismo mensaje a muchos destinatarios.',4);
  const L=[],seen=new Set();let forms=0,pw=0,pix=0,hid=[];
  if(o.html){const d=new DOMParser().parseFromString(o.html,'text/html');
   d.querySelectorAll('a[href]').forEach(a=>L.push({href:a.getAttribute('href').trim(),text:a.textContent.replace(ZW,'').replace(/\s+/g,' ').trim(),zw:(a.textContent.match(ZW)||[]).length}));
   forms=d.querySelectorAll('form').length;hid=[...d.querySelectorAll('[style]')].filter(x=>/display\s*:\s*none|visibility\s*:\s*hidden|font-size\s*:\s*0|max-height\s*:\s*0|color\s*:\s*transparent/i.test(x.getAttribute('style'))).map(x=>x.textContent.replace(ZW,'').replace(/\s+/g,' ').trim()).filter(Boolean);pw=d.querySelectorAll('input[type=password]').length;
   pix=[...d.querySelectorAll('img')].filter(i=>(i.getAttribute('width')==='1'&&i.getAttribute('height')==='1')||/width:\s*1px/.test(i.getAttribute('style')||'')).length}
  (txt.match(/https?:\/\/[^\s<>"')\]]+/g)||[]).forEach(u=>L.push({href:u,text:''}));
+ o.att.forEach(a=>{if(a.pdf)a.pdf.uris.forEach(u=>L.push({href:u,text:'(PDF)'}))});
  const LA=L.filter(l=>{const k=l.href+'|'+l.text;if(seen.has(k))return false;seen.add(k);return true}).map(ana).filter(Boolean);
  QR.forEach(q=>{const a=ana({href:q.url,text:''});if(a){a.dec=1;a.qr=1;LA.push(a)}});
  const DEC=decs(LA);DEC.filter(d=>!d.via).forEach(d=>d.urls.forEach(u=>{const k=u+'|(dec)';if(seen.has(k))return;seen.add(k);const a=ana({href:u,text:''});if(a){a.dec=1;LA.push(a)}}));
@@ -405,7 +423,7 @@ async function analyze(raw){
   else if(EM.has(x))add('med','Adjunto de riesgo ('+x+')',a.name+' es un formato habitual para ocultar malware o páginas falsas.',10)}
  
  const score=Math.min(100,F.reduce((a,f)=>a+f.p,0)),sc=k=>Math.min(100,F.filter(f=>f.c===k).reduce((a,f)=>a+f.p,0));
- return{e,o,F,fr,rt,rp,snd,mid,au:auD,LA,dec:DEC,hops,score,txt,hits,msgs:flat(e,o),sE:sc('e'),sC:sc('c')}}
+ return{e,o,F,fr,rt,rp,snd,mid,au:auD,LA,dec:DEC,hops,score,txt,hits,msgs:flat(e,o),envr,sE:sc('e'),sC:sc('c')}}
 
 const VD=s=>s<15?['Riesgo bajo','ok','No se aprecian señales claras de phishing.']:s<40?['Sospechoso','md','Hay señales que conviene revisar antes de actuar.']:s<70?['Riesgo alto','hi','Varias señales típicas de phishing.']:['Phishing probable','hi','No abras enlaces ni adjuntos.'];
 const SV={high:['Alto','hi'],med:['Medio','md'],low:['Bajo','info'],ok:['Correcto','ok']},ORD={high:0,med:1,low:2,ok:3};
@@ -446,7 +464,7 @@ function show(r){R=r;const[v,c,d]=VD(r.score),n=k=>r.F.filter(f=>f.s===k).length
  $('#in').classList.add('hid');$('#out').classList.remove('hid');
  $('#vd').className='vd t-'+c;$('#vd').innerHTML=`<div class="n">${r.score}<small>/100</small></div><h2>${ic(c==='ok'?'shield-check':'shield-alert',20)}${v}</h2><p>${d} ${n('high')} alto, ${n('med')} medio, ${n('low')} bajo.</p>${sb('Envío',r.sE)}${sb('Contenido',r.sC)}`;
 
- const E=r.e;$('#selw').innerHTML=ALL.length>1?'<select id="sel">'+ALL.map((a,i)=>`<option value="${i}"${a===r?' selected':''}>${esc(a.name)}</option>`).join('')+'</select>':'';if(ALL.length>1)$('#sel').onchange=ev=>show(ALL[+ev.target.value]);const sd=r.snd.email&&r.snd.email!==r.fr.email;$('#meta').innerHTML=[['Asunto',H1(E,'subject')],['Sender',H1(E,'sender'),sd],['De',H1(E,'from')],['Para',H1(E,'to')],['Fecha',H1(E,'date')]].map(([k,x,b])=>`<dt>${k}</dt><dd${b?' class="t-hi"':''}>${esc(x||'—')}</dd>`).join('');
+ const E=r.e;$('#selw').innerHTML=ALL.length>1?'<select id="sel">'+ALL.map((a,i)=>`<option value="${i}"${a===r?' selected':''}>${esc(a.name)}</option>`).join('')+'</select>':'';if(ALL.length>1)$('#sel').onchange=ev=>show(ALL[+ev.target.value]);const sd=r.snd.email&&r.snd.email!==r.fr.email;$('#meta').innerHTML=[['Asunto',H1(E,'subject')],['Sender',H1(E,'sender'),sd],['De',H1(E,'from')],['Para',H1(E,'to')||(r.envr&&r.envr.length?'(sin To/Cc) '+r.envr[0]:'')],['Fecha',H1(E,'date')]].map(([k,x,b])=>`<dt>${k}</dt><dd${b?' class="t-hi"':''}>${esc(x||'—')}</dd>`).join('');
  const T={
  'Hallazgos':()=>[...r.F].sort((a,b)=>ORD[a.s]-ORD[b.s]).map(f=>`<div class="f"><span class="bd ${SV[f.s][1]}">${ic(SI[f.s],15)}${SV[f.s][0]}</span><div><b>${esc(f.t)}</b><p>${esc(f.d)}</p></div></div>`).join('')||'<p>Sin hallazgos.</p>',
  'Conversación':()=>convHtml(),
@@ -454,7 +472,7 @@ function show(r){R=r;const[v,c,d]=VD(r.score),n=k=>r.F.filter(f=>f.s===k).length
  'Identidad':()=>`<div class="chips">${['spf','dkim','dmarc'].map(k=>{const x=r.au[k]||'sin dato';return`<div class="chip ${/gateway/.test(x)?'info':/pass$/.test(x)?'ok':/fail|error/.test(x)?'hi':'info'}">${k.toUpperCase()}<span>${esc(x)}</span></div>`}).join('')}</div>`+tb(['Campo','Valor','Dominio'],[['Sender',H1(E,'sender'),r.snd.domain],['From',H1(E,'from'),r.fr.domain],['Reply-To',H1(E,'reply-to'),r.rt.domain],['Return-Path',H1(E,'return-path'),r.rp.domain],['Message-ID',H1(E,'message-id'),r.mid]].map(x=>`<tr><td>${x[0]}</td><td class="m">${esc(x[1]||'—')}</td><td class="m">${esc(x[2]||'—')}</td></tr>`)),
  'Ruta':()=>{const o=r.hops.find(h=>h.ip&&!/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h.ip));return(o?`<p class="hint">${ic('route',14)}IP de origen estimada: <b class="m">${esc(o.ip)}</b>${o.rd&&o.rd!=='unknown'?' ('+esc(o.rd)+')':''}. Los saltos «localhost» o con IP privada son internos del servidor que reenvía el mensaje.</p>`:'')+tb(['#','Desde (HELO)','DNS inverso','IP','Por','Fecha','Notas'],r.hops.map((h,i)=>`<tr><td>${i+1}</td><td class="m">${esc(h.fr)}</td><td class="m">${esc(h.rd||'—')}</td><td class="m">${esc(h.ip||'—')}</td><td class="m">${esc(h.by)}</td><td>${esc(h.dt)}</td><td>${h.n.map(x=>`<span class="tl ${/DNS|HELO/.test(x)?'md':'info'}">${esc(x)}</span>`).join('')||'—'}</td></tr>`))},
  'Enlaces':()=>tb(['Texto visible','Destino real','URL decodificada','Señales'],r.LA.map(l=>{let d='—';try{const x=decodeURIComponent(l.href);if(x!==l.href)d=x}catch(e){}return`<tr><td>${esc(l.text.slice(0,80)||(l.qr?'(destino del código QR)':l.dec?'(URL oculta en un parámetro)':'—'))}${l.zw?` <span class="tl md">${l.zw} car. invisibles</span>`:''}</td><td class="m">${l.via?`<span class="tl info">${esc(l.via)}</span> ${esc(l.dest.slice(0,200))}`:esc(l.href.slice(0,200))}</td><td class="m">${esc(d.slice(0,200))}</td><td>${l.f.map(([s,t])=>`<span class="tl ${SV[s][1]}">${esc(t)}</span>`).join('')||'—'}</td></tr>`}))+'<h3>Parámetros decodificados (URL, Base64, hex)</h3>'+tb(['Enlace','Dónde','Original','Decodificado'],r.dec.map(d=>`<tr><td class="m">${esc(d.host)}</td><td>${esc(d.where)}${d.key?': <span class="m">'+esc(d.key)+'</span>':''}<br><span class="tl info">${d.ch.join(' → ')}</span></td><td class="m">${esc(d.raw.slice(0,160))}</td><td class="m">${esc(d.out.slice(0,300))}</td></tr>`)),
- 'Adjuntos':()=>tb(['Nombre','Tipo','Tamaño','SHA-256'],r.o.att.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${(a.size/1024).toFixed(1)} KB</td><td class="m">${a.sha}</td></tr>`)),
+ 'Adjuntos':()=>tb(['Nombre','Tipo','Tamaño','SHA-256','Notas'],r.o.att.map(a=>`<tr><td>${esc(a.name)}</td><td>${esc(a.type)}</td><td>${(a.size/1024).toFixed(1)} KB</td><td class="m">${a.sha}</td><td>${[a.enc?'<span class="tl md">Cifrado</span>':'',a.pdf&&(a.pdf.JavaScript||a.pdf.JS||a.pdf.Launch)?'<span class="tl hi">JavaScript o acciones</span>':'',a.pdf&&a.pdf.URI?'<span class="tl info">'+a.pdf.URI+' enlaces</span>':''].join('')||'—'}</td></tr>`)),
  'Cabeceras':()=>tb(['Cabecera','Valor'],E.hs.map(h=>`<tr><td class="m">${esc(h[0])}</td><td class="m">${esc(h[1].slice(0,400))}</td></tr>`))};
  $('#tabs').innerHTML=Object.keys(T).map((k,i)=>`<button data-k="${k}" class="${i?'':'a'}">${ic(TI[k],15)}${k}</button>`).join('');
  const set=k=>{$('#pane').innerHTML=T[k]();document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('a',b.dataset.k===k));
