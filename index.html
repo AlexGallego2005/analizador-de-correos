@@ -103,7 +103,7 @@ pre{margin:0;padding:14px 16px;white-space:pre-wrap;overflow-wrap:anywhere;font:
 <div id="pw" class="hid"><textarea id="ta" placeholder="Pega aquí el código fuente completo del correo…" spellcheck="false"></textarea><div class="row"><button class="p" id="go">Analizar</button></div></div>
 </section>
 
-<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cr"></button><button id="cp" title="Copiar dominios, IPs y hashes sin activar"></button><button id="nw" class="g"></button></div><div id="rp"></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section><footer><span id="fl"></span><span>v1.15.1</span></footer></div>
+<section id="out" class="hid"><div class="lay"><aside><div id="selw"></div><div id="vd" class="vd"></div><dl id="meta" class="meta"></dl><div class="btns"><button id="cr"></button><button id="cp" title="Copiar dominios, IPs y hashes sin activar"></button><button id="nw" class="g"></button></div><div id="rp"></div></aside><main><div class="tabs" id="tabs"></div><div id="pane"></div></main></div></section><footer><span id="fl"></span><span>v1.16.0</span></footer></div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -257,7 +257,7 @@ const SLD=new Set(['co','com','org','net','gob','gov','edu','ac']);
 function reg(h){h=h.toLowerCase().replace(/\.$/,'');if(/^[\d.]+$/.test(h)||h.includes(':'))return h;const p=h.split('.'),n=p.length;if(n<=2)return h;return p[n-1].length===2&&SLD.has(p[n-2])?p.slice(-3).join('.'):p.slice(-2).join('.')}
 function adr(s){const m=s.match(/<([^>]+)>/),a=(m?m[1]:s.replace(/\(.*?\)/g,'')).trim(),em=a.match(/[^\s<>"',;]+@[^\s<>"',;]+/);
  return{email:em?em[0].toLowerCase():'',name:m?s.slice(0,m.index).replace(/^\s*"|"\s*$/g,'').trim():'',domain:em?reg(em[0].split('@')[1]):''}}
-const BR={paypal:['paypal.com'],microsoft:['microsoft.com','microsoftonline.com','office.com','live.com','outlook.com','office365.com','sharepoint.com'],google:['google.com','gmail.com','googlemail.com','googleusercontent.com','gstatic.com'],apple:['apple.com','icloud.com'],amazon:['amazon.com','amazon.es','amazon.co.uk','amazonaws.com'],netflix:['netflix.com'],facebook:['facebook.com','facebookmail.com','fb.com'],instagram:['instagram.com'],linkedin:['linkedin.com'],dropbox:['dropbox.com'],docusign:['docusign.com','docusign.net'],dhl:['dhl.com','dhl.de'],correos:['correos.es'],fedex:['fedex.com'],bbva:['bbva.es','bbva.com'],santander:['santander.com','santander.es','gruposantander.com'],caixabank:['caixabank.es','caixabank.com'],binance:['binance.com'],coinbase:['coinbase.com'],whatsapp:['whatsapp.com'],agenciatributaria:['agenciatributaria.gob.es','agenciatributaria.es']};
+const BR={paypal:['paypal.com'],microsoft:['microsoft.com','microsoftonline.com','microsoftonline-p.com','microsoft365.com','office.com','office.net','live.com','outlook.com','office365.com','sharepoint.com','sharepointonline.com','onedrive.com','1drv.ms'],google:['google.com','gmail.com','googlemail.com','googleusercontent.com','gstatic.com'],apple:['apple.com','icloud.com'],amazon:['amazon.com','amazon.es','amazon.co.uk','amazonaws.com'],netflix:['netflix.com'],facebook:['facebook.com','facebookmail.com','fb.com'],instagram:['instagram.com'],linkedin:['linkedin.com'],dropbox:['dropbox.com'],docusign:['docusign.com','docusign.net'],dhl:['dhl.com','dhl.de'],correos:['correos.es'],fedex:['fedex.com'],bbva:['bbva.es','bbva.com'],santander:['santander.com','santander.es','gruposantander.com'],caixabank:['caixabank.es','caixabank.com'],binance:['binance.com'],coinbase:['coinbase.com'],whatsapp:['whatsapp.com'],agenciatributaria:['agenciatributaria.gob.es','agenciatributaria.es']};
 BR.teams=BR.onedrive=BR.sharepoint=BR.microsoft;
 BR.myminfin=BR['spf finances']=['myminfin.be','minfin.fgov.be','fgov.be','belgium.be'];BR.hmrc=['hmrc.gov.uk','gov.uk'];BR.dgfip=BR['impots.gouv']=['impots.gouv.fr','gouv.fr'];BR['agencia tributaria']=BR.agenciatributaria;
 function brand(h){const r=reg(h),n=h.toLowerCase().replace(/0/g,'o').replace(/1/g,'l').replace(/3/g,'e').replace(/5/g,'s');for(const k in BR)if(n.includes(k)&&!BR[k].includes(r))return k;return''}
@@ -376,10 +376,18 @@ async function analyze(raw){
  if(rp.email&&rp.domain!==fr.domain)add('med','Return-Path de otro dominio','El sobre usa '+rp.domain+' y el remitente visible usa '+fr.domain+'. Es normal en servicios de envío masivo.',6);
  const nm=fr.name.match(/[\w.+-]+@([\w.-]+)/);
  if(nm&&reg(nm[1])!==fr.domain)add('high','Nombre visible con otra dirección','El nombre "'+fr.name+'" muestra una dirección distinta a la real ('+fr.email+').',18);
- for(const k in BR)if(fr.name.toLowerCase().includes(k)&&!BR[k].includes(fr.domain)){cat='c';add('high','Suplantación de marca en el nombre','El nombre menciona "'+k+'" pero el dominio real es '+fr.domain+'.',18);cat='e';break}
- const bf=fr.domain&&brand(fr.domain);if(bf)add('high','Dominio del remitente imita a una marca',fr.domain+' se parece a '+bf+' sin ser un dominio oficial.',20);
+ const rcv0=H(e,'received'),h0=rcv0.length?rcv0[rcv0.length-1]:'',ho=[(h0.match(/from\s+(\S+)/i)||[])[1]||'',(h0.match(/from\s+\S+\s*\(([^)\s\]]+)/)||[])[1]||''].filter(Boolean),spfOk=H(e,'received-spf').some(v=>/^\s*pass/i.test(v))||/spf=pass/i.test(H(e,'authentication-results').join(' ')),
+  ik=k=>({teams:'microsoft',onedrive:'microsoft',sharepoint:'microsoft'}[k]||k),corro=k=>{const re=INFRA[ik(k)];return !!re&&spfOk&&ho.some(x=>re.test(x))};
+ 
+ const bf=fr.domain&&brand(fr.domain),nb=Object.keys(BR).find(k=>fr.name.toLowerCase().includes(k)&&!BR[k].includes(fr.domain))||'',brn=bf||nb;
+ if(brn&&corro(brn))add('med','Dominio no reconocido de '+cap(ik(brn))+', pero con trayectoria de la marca','«'+fr.domain+'» no está en mi lista de dominios oficiales de '+cap(ik(brn))+', aunque el mensaje nace en '+ho[0]+' y SPF dio pass. Es probable que sea legítimo, pero la cabecera Received más antigua puede falsificarse: confírmalo si dudas.',6);
+ else{if(bf)add('high','Dominio del remitente imita a una marca',fr.domain+' se parece a '+bf+' sin ser un dominio oficial.',20);
+  if(nb){cat='c';add('high','Suplantación de marca en el nombre','El nombre menciona "'+nb+'" pero el dominio real es '+fr.domain+'.',18);cat='e'}}
+ const ck=Object.keys(INFRA).find(k=>corro(k)&&(BR[k]||[]).includes(fr.domain));
+ if(ck)add('ok','Trayectoria verificada con la infraestructura de '+cap(ck),'El mensaje nace en '+ho[0]+' (servidor propio de '+cap(ck)+'), SPF dio pass y el dominio del remitente es oficial. Coherente con el recorrido real: no es una suplantación.');
+ 
  if(/xn--/.test(fr.domain))add('high','Dominio del remitente en punycode','Puede ser un homógrafo que imita otro dominio.',15);
- if(!H1(e,'message-id'))add('med','Sin Message-ID','Los servidores legítimos siempre lo añaden.',5);else if(mid&&fr.domain&&reg(mid)!==fr.domain&&!(reg(mid)==='google.com'&&fr.domain==='gmail.com'))add('low','Message-ID de otro dominio','Generado por '+reg(mid)+'.');
+ if(!H1(e,'message-id'))add('med','Sin Message-ID','Los servidores legítimos siempre lo añaden.',5);else if(mid&&mid.includes('.')&&fr.domain&&reg(mid)!==fr.domain&&!(reg(mid)==='google.com'&&fr.domain==='gmail.com'))add('low','Message-ID de otro dominio','Generado por '+reg(mid)+'.');
  cat='e';const priv=ip=>/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(ip)||/^(::1|fe80|fc|fd)/i.test(ip);
  const hops=H(e,'received').map(v=>{const w=v.replace(/\bid\s+[\w.-]+/gi,''),f=w.match(/from\s+(\S+)\s*(?:\(([^)]*)\))?/i)||[],inn=f[2]||'',helo=f[1]||'',
   ip=(inn.match(/((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7})/i)||[])[1]||(helo.match(/^\[?((?:\d{1,3}\.){3}\d{1,3})\]?$/)||[])[1]||'',
@@ -476,6 +484,11 @@ async function analyze(raw){
   if(dl||sens||hits.length>=3)for(const k in BR)if(new RegExp('\\b'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(lt)&&!BR[k].includes(fr.domain)&&!LA.some(l=>BR[k].includes(reg(l.host||'')))){bk=k;break}
   if(bk)add('high','Remitente gratuito que cita una marca u organismo ('+bk+')','El texto menciona «'+bk+'», pero el mensaje sale de '+fr.domain+' y ningún enlace va a su dominio oficial.',14);
   if(ROLE.test(lt)||OUTR.test(lt))add('med','Cuenta gratuita con cargo corporativo o captación','El mensaje presenta un cargo o una oferta profesional, pero se envía desde '+fr.domain+'. Es habitual en captación no solicitada y en fraudes de empleo.',8)}
+ const rlab=[...new Set(tos.map(x=>reg(x.split('@')[1]||'')).filter(d=>d&&!FREE.test(d)).map(d=>d.split('.')[0]))];
+ if(rlab.length)for(const h of [...new Set(LA.map(l=>l.host||'').filter(h=>/^[a-z0-9-]+\.sharepoint\.com$/i.test(h)&&!/^(www|login)\./i.test(h)))].slice(0,3)){
+  const t=h.split('.')[0].toLowerCase().replace(/-(my|admin|files)$/,''),nm=rlab.find(n=>t===n||t.replace(/\d+$/,'')===n||t.startsWith(n)||n.startsWith(t));
+  if(nm)add('ok','El enlace de SharePoint apunta al tenant de tu organización','«'+h+'» corresponde a «'+nm+'»: es una compartición interna, no un archivo de un tercero.');
+  else add('med','Enlace de SharePoint de un tenant ajeno','El enlace va a «'+h+'», que no es el tenant de tu organización. Los ataques por compartición usan SharePoint real: el correo es auténtico, pero el archivo y el enlace los controla un tercero.',8)}
  const rq=[...new Set([...tos.map(x=>reg(x.split('@')[1]||'')),fr.domain].filter(Boolean))].map(d=>[d,d.split('.')[0]]).filter(x=>x[1].length>=4);
  LA.forEach(l=>{const h=l.host||'';if(!h||/^[\d.:]+$/.test(h)||!l.f)return;const r=reg(h);if(rq.some(x=>x[0]===r))return;const sub=h.slice(0,Math.max(0,h.length-r.length)).replace(/\.$/,'').toLowerCase();if(!sub)return;
   const hit=rq.find(([d,n])=>sub.split('.').some(q=>q===n||q.replace(/-/g,'')===n)||sub.includes(d));if(hit)l.f.push(['high','Subdominio que imita al dominio del destinatario o del remitente ('+hit[0]+')'])});
@@ -511,6 +524,8 @@ const VD=s=>s<15?['Riesgo bajo','ok','No se aprecian señales claras de phishing
 const SV={high:['Alto','hi'],med:['Medio','md'],low:['Bajo','info'],ok:['Correcto','ok']},ORD={high:0,med:1,low:2,ok:3};
 const tb=(h,r)=>r.length?`<div class="tw"><table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.join('')}</table></div>`:'<p class="hint">Sin datos.</p>';
 const wb=s=>String(s??'').split(/([.\/?&=_-])/).map((x,i)=>i%2?esc(x)+'<wbr>':esc(x)).join('');
+const INFRA={microsoft:/(^|\.)(substrate\.office\.com|graph\.microsoft\.com|sharepoint\.com|sharepointonline\.com|onedrive\.com|teams\.microsoft\.com|office\.com|microsoft\.com)$/i,paypal:/(^|\.)paypal\.com$/i,facebook:/(^|\.)(facebook\.com|facebookmail\.com)$/i,linkedin:/(^|\.)linkedin\.com$/i,apple:/(^|\.)(apple\.com|icloud\.com)$/i,docusign:/(^|\.)(docusign\.net|docusign\.com)$/i,dropbox:/(^|\.)dropbox\.com$/i};
+const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
 const PRIVIP=/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|fe80|f[cd][0-9a-f]{2}:)/i;
 const fd=s=>{const t=Date.parse(s);return isNaN(t)?s:new Date(t).toISOString().replace('T',' ').slice(0,19)};
 const defang=s=>s.replace(/^http/i,'hxxp').replace(/\./g,'[.]');
